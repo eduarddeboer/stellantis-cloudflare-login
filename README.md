@@ -139,8 +139,21 @@ That discrepancy is confirmed; whether it caused HTTP 403 is **not yet
 proven**. Cloudflare Access/Browser Integrity Check is another possible
 cause (especially for the default Python urllib User-Agent).
 
-**Next evidence:** read-only `npx wrangler deployments list --env staging`
-and an unauthenticated `GET /health` of the verified deployment hostname.
+**Follow-up evidence:** `npx wrangler deployments list --env staging`
+showed an Upload (19:31:45 UTC) and subsequent Secret Change (19:33:21 UTC)
+on 17 November 2026. Both the canonical
+`stellantis-cloudflare-login-staging` and the older-looking
+`stellantis-cloudflare-worker-staging` hostname responded with HTTP 200
+to unauthenticated `GET /health` using a descriptive User-Agent.
+This **does not prove that both point to the same Worker, or what
+source commit was deployed**. The existing Worker does not emit
+HTTP 403 for `POST /validate`. According to Cloudflare's own workers.dev
+documentation, Python urllib's default User-Agent may be blocked
+before the Worker executes. This is now a **strong hypothesis**.
+The next check is an unauthenticated `POST /validate` on both hosts,
+comparing the Python and descriptive User-Agents, without an API key.
+Do not repeat the credential-bearing diagnostic yet.
+
 The local diagnostic was corrected to label non-200 host checks
 `result=unverified`, with regressions for both 403 and the normal
 200 → public-page sequence. **This improvement is awaiting Mac tests.**
