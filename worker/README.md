@@ -30,7 +30,7 @@ The staging deployment is **explicit**; no CI workflow deploys a Worker. `wrangl
 
 - Public `GET /health` checks configuration presence, **not** login readiness.
 - Bearer-authenticated `POST /` accepts `{ "url": "...", "email": "...", "password": "..." }` and returns `{ "code": "..." }` on success.
-- Bearer-authenticated `POST /validate` checks a proposed login URL without a browser.
+- Bearer-authenticated `POST /validate` checks **only the exact HTTPS provider-host allowlist** without a browser; `allowed: true` does not validate the OAuth path/redirect or prove login readiness. The stricter `POST /login-page-check` validates the complete authorize URL.
 - Bearer-authenticated `POST /browser-check` checks Browser Rendering without Peugeot credentials.
 - Bearer-authenticated `POST /login-page-check` examines only the public login page and does not submit credentials.
 
