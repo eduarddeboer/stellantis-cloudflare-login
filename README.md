@@ -13,6 +13,18 @@ The Worker requests an OAuth *authorization code*. Home Assistant remains the ow
 
 This fork is **not production-ready**. Verified results to date:
 
+**Local acceptance evidence (17 November 2026, macOS):** commit
+`5e4e341` on `feat/open-source-worker-v03rc` passed
+`bash scripts/check_local.sh`: **41 Python tests, 34 Worker tests**,
+Python compilation, Worker TypeScript typecheck, deterministic HACS ZIP
+(**44 integration files**), and Wrangler staging dry-run with
+`BROWSER`, `LOGIN_RATE_LIMITER` (3 requests / 60 seconds), and
+`ALLOWED_LOGIN_HOSTS` bindings. The script reported `PASS`.
+This is offline acceptance only; no new live OAuth, rate-limit exhaustion,
+Cloudflare deployment, or production Home Assistant test was performed.
+Documentation-only commits after `5e4e341` are not retested by that run.
+
+
 - Worker and Home Assistant offline regression checks pass, including OAuth code-to-token
   simulation, token refresh, secret-safe HTTP diagnostics, login rate limiting and
   cleanup of fictional account resources.
