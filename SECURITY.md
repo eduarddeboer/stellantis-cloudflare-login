@@ -14,5 +14,12 @@ Security boundaries:
 - The Worker returns an authorization code; the Home Assistant integration is the sole owner of token exchange/refresh.
 - Do not disable access control to accommodate a client, bypass interactive verification, or deploy external PRs automatically.
 - An offline CI pass and `/health` are not evidence of live authentication or production readiness.
+- The optional local staging diagnostic reads the Worker `API_KEY` through
+  hidden input and invokes only `/validate` and `/login-page-check`.
+  It deliberately disables redirected HTTP requests so authentication
+  headers cannot be forwarded to another destination. It never accepts
+  Peugeot credentials or invokes the live login endpoint. Diagnostic
+  output is whitelisted to non-sensitive status categories; do not paste
+  raw network traces or secrets when reporting an issue.
 
 Never use someone else's Stellantis account without authorization.
