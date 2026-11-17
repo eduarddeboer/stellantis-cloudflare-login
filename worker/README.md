@@ -26,6 +26,38 @@ npx wrangler deploy --env staging
 
 The staging deployment is **explicit**; no CI workflow deploys a Worker. `wrangler.toml` has a separate staging environment and a verified MyPeugeot NL hostname from the earlier test. Verify the OAuth URL/hostname of your own app before extending the allowlist. Confirm the output `*.workers.dev` hostname is in **your** account before entering credentials or an API key in Home Assistant.
 
+## Credential-free staging acceptance from your Mac
+
+After `bash scripts/check_local.sh` passes, run this **read-only**
+inspection from the repository root:
+
+```sh
+python3 scripts/check_staging_readonly.py
+```
+
+Enter the root HTTPS URL of **your own** staging `NAME.ACCOUNT.workers.dev`
+Worker, followed by its `API_KEY` (entered with hidden input). Never paste
+the key into GitHub, chat, a shell command, or test output. The script uses
+the committed MyPeugeot NL OAuth configuration to create the *public*
+authorize URL locally; it does not read or request a Peugeot email or password.
+
+Only authenticated `POST /validate` (host allowlist) and
+`POST /login-page-check` (public-page Browser Rendering inspection) are
+called. The local script does **not** call the credential-bearing `POST /`,
+submit login forms, exchange tokens, follow HTTP redirects from the Worker,
+or print URLs, credentials, response bodies, or HTML. The reported HTTP
+status, fixed page category, stage/reason and form-visibility booleans are
+safe to share. A `502` can mean that Peugeot shows an email-first or
+challenge flow and **does not** prove the login works or fails.
+
+**Crucial distinction:** this checks the Worker version **currently deployed**
+to staging. It does **not** test a newly committed OAuth policy until that
+Worker version has been deliberately deployed to staging after local
+acceptance. Do not deploy or enter real Peugeot credentials as part of this
+diagnosis. If you see a different identity-host category, investigate the
+official redirect flow before changing `ALLOWED_LOGIN_HOSTS`; never add a
+hostname merely to suppress a failure.
+
 ## API
 
 - Public `GET /health` checks configuration presence, **not** login readiness.
