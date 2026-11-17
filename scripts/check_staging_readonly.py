@@ -160,10 +160,16 @@ def main() -> int:
     try:
         url = public_authorize_url()
         status, data = inspect(worker, secret, "/validate", url)
+        if status != 200:
+            # A failed HTTP request is not an actual host allowlist decision.
+            # Avoid implying that a Cloudflare-level 403 is a Worker refusal.
+            print(f"Host allowlist: HTTP {status}; result=unverified")
+            print("STOP: staging request rejected; verify deployment URL and access controls")
+            return 1
         allowed = data.get("allowed") is True
         print(f"Host allowlist: HTTP {status}; allowed={allowed}")
-        if status != 200 or not allowed:
-            print("STOP: read-only page inspection skipped (allowlist/auth failed)")
+        if not allowed:
+            print("STOP: read-only page inspection skipped (host not allowlisted)")
             return 1
 
         status, data = inspect(worker, secret, "/login-page-check", url)
