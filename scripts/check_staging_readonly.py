@@ -20,6 +20,8 @@ ROOT = Path(__file__).resolve().parents[1]
 CONFIGS = ROOT / "custom_components" / "stellantis_vehicles" / "configs.json"
 CONSTANTS = ROOT / "custom_components" / "stellantis_vehicles" / "const.py"
 WORKER_CLIENT = ROOT / "custom_components" / "stellantis_vehicles" / "worker_oauth_client.py"
+# Public, non-sensitive UA verified with the existing staging Worker.
+USER_AGENT = "stellantis-staging-check/1.0"
 STAGES = frozenset({
     "browser_launch", "browser_context", "browser_page",
     "login_navigation", "login_email_field", "login_password_field",
@@ -97,6 +99,7 @@ def inspect(endpoint: str, api_key: str, path: str, authorize_url: str) -> tuple
         endpoint.rstrip("/") + path, data=payload, method="POST",
         headers={
             "Authorization": "Bearer " + api_key,
+            "User-Agent": USER_AGENT,
             "Accept": "application/json", "Content-Type": "application/json",
         },
     )
