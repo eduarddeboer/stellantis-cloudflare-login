@@ -13,13 +13,19 @@ DEFAULT_DEST = ROOT / "dist" / "stellantis_vehicles.zip"
 REQUIRED = {"__init__.py", "manifest.json", "worker_oauth_client.py", "config_flow.py", "translations/en.json"}
 
 
-def build(dest: Path) -> tuple[int, int]:
+def build(dest: Path, *, release_tag: str | None = None) -> tuple[int, int]:
     metadata = json.loads((ROOT / "hacs.json").read_text(encoding="utf-8"))
     manifest = json.loads((COMPONENT / "manifest.json").read_text(encoding="utf-8"))
     if metadata.get("zip_release") is not True or metadata.get("filename") != "stellantis_vehicles.zip":
         raise ValueError("HACS release settings do not match stellantis_vehicles.zip")
     if manifest.get("domain") != "stellantis_vehicles" or not manifest.get("version"):
         raise ValueError("Invalid HA integration domain or missing version")
+    # A HACS zip_release asset is selected by its GitHub release tag.
+    # Reject a wrong tag before writing an installable archive.
+    if release_tag is not None and release_tag != manifest["version"]:
+        raise ValueError(
+            f"Release tag {release_tag!r} must exactly match integration manifest version {manifest['version']!r}"
+        )
 
     files = []
     for file in COMPONENT.rglob("*"):
@@ -59,8 +65,9 @@ def build(dest: Path) -> tuple[int, int]:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, default=DEFAULT_DEST)
+    parser.add_argument("--release-tag", help="Expected GitHub release tag; must equal manifest.json version")
     args = parser.parse_args()
-    count, size = build(args.out)
+    count, size = build(args.out, release_tag=args.release_tag)
     print(f"VALID: {args.out} ({count} integration files, {size} bytes); not published")
 
 
