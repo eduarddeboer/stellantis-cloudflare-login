@@ -1,0 +1,53 @@
+name: Offline validation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  worker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install Worker dependencies
+        working-directory: worker
+        run: npm install --no-audit --no-fund
+      - name: Typecheck Worker
+        working-directory: worker
+        run: npm run check
+      - name: Run credential-free Worker unit tests
+        working-directory: worker
+        run: npm test
+      - name: Validate Cloudflare bundle without deployment
+        working-directory: worker
+        run: npx wrangler deploy --dry-run --env staging --outdir ./dist
+  ha-static:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Compile Home Assistant integration
+        run: python3 -m compileall -q custom_components/stellantis_vehicles
+      - name: Validate component and Marketplace metadata
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          component = Path('custom_components/stellantis_vehicles')
+          manifest = json.loads((component / 'manifest.json').read_text())
+          hacs = json.loads(Path('hacs.json').read_text())
+          assert manifest['domain'] == 'stellantis_vehicles'
+          assert hacs['zip_release'] is True
+          assert hacs['filename'] == 'stellantis_vehicles.zip'
+          assert (component / 'worker_oauth_client.py').is_file()
+          print('Static metadata checked; release packaging still requires acceptance.')
+          PY

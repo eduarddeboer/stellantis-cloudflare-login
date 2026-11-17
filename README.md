@@ -1,30 +1,27 @@
-# Stellantis Cloudflare Login — experimentele releasecandidate
+# Stellantis Cloudflare Login
 
-> **LET OP: dit is een openbare testrelease, niet voor productiegebruik.** Uitsluitend installeren op een afzonderlijke, herstelbare Home Assistant-testinstallatie.
+**Experimental community release candidate — do not use on production Home Assistant.**
 
-De installatie wordt getest met Home Assistant Marketplace 2026.11+. De Cloudflare Worker zelf is **niet** inbegrepen in deze repository; de publieke licentie en distributie daarvan worden apart beoordeeld.
+This is an unofficial community project comprising:
 
-Deze community-fork is **niet officieel** van Stellantis, Peugeot, de oorspronkelijke auteur of Home Assistant.
+- `custom_components/stellantis_vehicles/` — the Stellantis Vehicles Home Assistant integration, based on upstream 2026.10.3, maintained here as **2026.10.3-beta.3**.
+- `worker/` — source of the Cloudflare Browser Rendering Worker. **Each user deploys and owns their own Worker** and keeps their credentials and API key outside GitHub.
 
-<!-- ha-marketplace:exclude-start -->
-## Preview-installatie
+The Worker requests an OAuth *authorization code*. Home Assistant remains the owner of token exchange, token refresh and vehicle data access. The project is not affiliated with Stellantis, Peugeot, Cloudflare, Home Assistant, or upstream authors.
 
-Voeg deze repository toe via Instellingen → Marketplace → Add from link. Schakel prereleases in en installeer uitsluitend op de geïsoleerde test-VM. Maak vooraf een snapshot. Voer geen MyPeugeot-credentials in.
+## Status (17 November 2026)
 
-<!-- ha-marketplace:exclude-end -->
-## Technische basis
+The original separate staging Worker has obtained an OAuth authorization code in a controlled MyPeugeot NL test. An earlier isolated release candidate passed 40 offline tests. **Neither result proves that the combined distribution is ready to install:** Marketplace packaging, full Home Assistant login, token exchange, refresh, reauthentication, and rollback still require isolated tests. Do not replace the working integration or change Energie-regisseur.
 
-# Stellantis Vehicles – Cloudflare Login (EXPERIMENTAL BETA)
+## Safe setup
 
-Niet officieel van Stellantis, Peugeot, Home Assistant of de oorspronkelijke ontwikkelaar.
+1. Read [Worker setup](worker/README.md) and deploy **your own** Cloudflare Worker to staging; never use an unknown third-party Worker for account credentials.
+2. Install the Home Assistant fork only in a separate test VM with a verified snapshot and backup including configuration entries. It uses the **same domain** as the upstream integration, so the two must not coexist.
+3. Test OAuth code generation, full token exchange, token refresh, reauthentication, and rollback before considering production.
+4. The Marketplace preview may be tested only after a valid prerelease package is built and checked. A green CI status or `/health` response is not sufficient.
 
-Bevat een fork van `stellantis_vehicles` versie **2026.10.3** (MIT), als **2026.10.3-beta.3**.
-Deze fork gebruikt **hetzelfde integratiedomein** als upstream en mag niet naast de bestaande Stellantis-integratie worden geïnstalleerd.
-Updates van de originele integratie kunnen deze patch overschrijven.
+## Contributions
 
-De gebruikersinterface ondersteunt zowel de standaardlogin als een expliciet bevestigde `https://NAME.ACCOUNT.workers.dev/` met eigen geheime sleutel.
-De OAuth-code wordt door deze Worker opgehaald; tokenuitwisseling en voertuiggegevens blijven bij Stellantis Vehicles.
+Please see [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md). Changes are proposed through PRs, reviewed and checked without real account credentials. The root [LICENSE](LICENSE) covers original code; [LICENSE-UPSTREAM-MIT](LICENSE-UPSTREAM-MIT) preserves upstream Stellantis Vehicles attribution.
 
-Maak vooraf een volledige Home Assistant-back-up (inclusief config entries).
-Installeer nooit op een draaiende installatie zonder terugvalplan.
-Dit pakket is niet getest op meerdere voertuigen of accounts.
+This repository is the **canonical public product source**. The original private Worker repository remains historical staging reference; do not implement diverging runtime behavior in two repositories.

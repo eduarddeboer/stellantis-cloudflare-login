@@ -1,0 +1,21 @@
+name = "stellantis-cloudflare-login"
+main = "src/index.ts"
+compatibility_date = "2026-11-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Keep variables managed in Cloudflare; API_KEY must be a Cloudflare Secret.
+keep_vars = true
+
+[browser]
+binding = "BROWSER"
+
+# Account-isolated test deployment. No production deploy from CI.
+[env.staging]
+workers_dev = true
+
+[env.staging.browser]
+binding = "BROWSER"
+
+# Verified exact MyPeugeot NL OAuth hostname used by the earlier staging test.
+[env.staging.vars]
+ALLOWED_LOGIN_HOSTS = "idpcvs.peugeot.com"
