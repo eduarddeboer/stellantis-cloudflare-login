@@ -100,10 +100,13 @@ class StagingReadOnlyTests(unittest.TestCase):
         self.assertEqual(req.get_method(), "POST")
         self.assertTrue(req.full_url.endswith("/validate"))
         self.assertEqual(req.get_header("Authorization"), "Bearer FAKE-KEY")
-        self.assertEqual(set(json.loads(req.data)), {"url"})
-        self.assertNotIn(b"FAKE-KEY", req.data)
-        self.assertNotIn(b"email", req.data)
-        self.assertNotIn(b"password", req.data)
+        payload = json.loads(req.data)
+        # The public OAuth scope legitimately contains the word "email".
+        # Check request JSON fields, not substrings inside the OAuth URL.
+        self.assertEqual(payload, {"url": module.public_authorize_url()})
+        for credential_field in ("email", "password", "username", "api_key", "access_token"):
+            self.assertNotIn(credential_field, payload)
+        self.assertNotIn("FAKE-KEY", payload["url"])
 
     def test_redirect_handler_refuses_all_redirects(self):
         handler = module.NoRedirect()
