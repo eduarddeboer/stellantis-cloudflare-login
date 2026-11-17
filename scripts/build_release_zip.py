@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 import zipfile
@@ -69,6 +70,11 @@ def main() -> None:
     args = parser.parse_args()
     count, size = build(args.out, release_tag=args.release_tag)
     print(f"VALID: {args.out} ({count} integration files, {size} bytes); not published")
+    # Keep a traceable digest of the exact bytes intended as the release asset.
+    # Verify a future GitHub download against this digest before approving it.
+    with args.out.open("rb") as archive:
+        digest = hashlib.file_digest(archive, "sha256").hexdigest()
+    print(f"SHA256: {digest}")
 
 
 if __name__ == "__main__":
