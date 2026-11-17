@@ -61,6 +61,35 @@ The local script now reports `result=unverified` for a non-200
 `/validate` response instead of displaying `allowed=False` as though
 a provider-host decision had been obtained.
 
+## Follow-up evidence: both health endpoints respond (17 November 2026)
+
+`wrangler deployments list --env staging` returned two deployment records:
+an Upload at 19:31:45 UTC and a subsequent Secret Change at 19:33:21 UTC.
+This establishes that Wrangler can inspect the configured staging service,
+but not which Git commit or code revision was deployed. Both
+`stellantis-cloudflare-login-staging` (canonical Wrangler service name)
+and the older-looking `stellantis-cloudflare-worker-staging` hostname
+returned **HTTP 200** to unauthenticated `GET /health` with a custom
+User-Agent. These checks prove that both endpoints answer, **not** that
+both belong to the same service or use the current code.
+
+The earlier `POST /validate` with Python `urllib` returned HTTP 403.
+The repository's existing Worker authorization logic never returns 403
+for that path. Cloudflare documents that `workers.dev` can reject the
+default Python urllib User-Agent *before* the Worker runs, while a
+descriptive application User-Agent is allowed. This is a strong
+hypothesis, not a confirmed root cause.
+
+**Next safe comparison (no API key or account credentials):** run the
+same unauthenticated `POST /validate` against each hostname with
+both User-Agent values. With this repository's Worker reached, missing
+Bearer authentication should return **HTTP 401**, before reading the JSON
+body. HTTP 403 with only the Python User-Agent points to a Cloudflare
+front-door block; status differences between hostnames identify a
+different deployment or access policy. Do not edit Worker runtime,
+rotate a key, disable protection, or redeploy based on a hostname's
+`GET /health` response alone.
+
 ## Credential-free staging acceptance from your Mac
 
 After `bash scripts/check_local.sh` passes, run this **read-only**
