@@ -101,6 +101,8 @@ class StagingReadOnlyTests(unittest.TestCase):
         self.assertEqual(req.get_method(), "POST")
         self.assertTrue(req.full_url.endswith("/validate"))
         self.assertEqual(req.get_header("Authorization"), "Bearer FAKE-KEY")
+        self.assertEqual(req.get_header("User-agent"), "stellantis-staging-check/1.0")
+        self.assertEqual(req.get_header("User-agent"), module.USER_AGENT)
         payload = json.loads(req.data)
         # The public OAuth scope legitimately contains the word "email".
         # Check request JSON fields, not substrings inside the OAuth URL.
@@ -205,6 +207,35 @@ class StagingReadOnlyTests(unittest.TestCase):
         self.assertIn("Host allowlist: HTTP 200; allowed=True", output.getvalue())
         self.assertIn("Public login page: HTTP 502", output.getvalue())
         self.assertNotIn("not-a-real-secret-of-sufficient-length", output.getvalue())
+
+
+    def test_both_readonly_requests_send_tested_user_agent(self):
+        captured = []
+
+        class FakeOpener:
+            def open(self, request, timeout):
+                captured.append((request.full_url, request.get_header("User-agent")))
+                if request.full_url.endswith("/validate"):
+                    return FakeResponse({"allowed": True})
+                return FakeResponse({"login_form": True})
+
+        with (
+            patch("builtins.input", return_value="https://own.account.workers.dev/"),
+            patch.object(module, "normalized_worker_url", return_value="https://own.account.workers.dev/"),
+            patch.object(module.getpass, "getpass", return_value="not-a-real-secret-of-sufficient-length"),
+            patch.object(module, "public_authorize_url", return_value="https://example.invalid/authorize"),
+            patch.object(module, "build_opener", return_value=FakeOpener()),
+            redirect_stdout(io.StringIO()),
+        ):
+            result = module.main()
+        self.assertEqual(result, 0)
+        self.assertEqual(
+            captured,
+            [
+                ("https://own.account.workers.dev/validate", module.USER_AGENT),
+                ("https://own.account.workers.dev/login-page-check", module.USER_AGENT),
+            ],
+        )
 
 
 if __name__ == "__main__":
