@@ -26,6 +26,38 @@ npx wrangler deploy --env staging
 
 The staging deployment is **explicit**; no CI workflow deploys a Worker. `wrangler.toml` has a separate staging environment and a verified MyPeugeot NL hostname from the earlier test. Verify the OAuth URL/hostname of your own app before extending the allowlist. Confirm the output `*.workers.dev` hostname is in **your** account before entering credentials or an API key in Home Assistant.
 
+## Confirm the exact staging Worker identity before testing
+
+The canonical `worker/wrangler.toml` has
+`name = "stellantis-cloudflare-login"` and `[env.staging]` with
+`workers_dev = true`, without a staging name override. Wrangler therefore
+targets the **service named `stellantis-cloudflare-login-staging`**;
+the expected workers.dev hostname is
+`stellantis-cloudflare-login-staging.<YOUR_ACCOUNT_SUBDOMAIN>.workers.dev`.
+The real URL must still be verified against the Cloudflare dashboard or
+deployment output; an earlier manually deployed Worker can have another
+name. Never assume that a plausible workers.dev hostname identifies
+the intended or trusted Worker.
+
+Safe read-only checks from the `worker/` directory:
+
+```sh
+npx wrangler deployments list --env staging
+```
+
+For an independent *unauthenticated* availability check, use `GET /health`
+with a descriptive User-Agent and inspect **only its HTTP status**. This
+does not submit an API key or Peugeot credentials and cannot by itself
+prove the Worker's code/version. HTTP 403 from a diagnostic request is
+**not a valid `allowed: false` response** from `POST /validate`: this
+repository's Worker returns 200 (with an explicit boolean), 401 for
+a rejected API key, 400/415 for malformed input, or 404 for an unsupported
+path, not 403. A 403 may originate from a different deployed Worker or
+from Cloudflare's access controls or Browser Integrity Check. The default
+Python `urllib` User-Agent is a known reason for Cloudflare-managed
+workers.dev blocks. Verify the hostname and origin of the response
+**before** changing code, keys, permissions or security policy.
+
 ## Credential-free staging acceptance from your Mac
 
 After `bash scripts/check_local.sh` passes, run this **read-only**
