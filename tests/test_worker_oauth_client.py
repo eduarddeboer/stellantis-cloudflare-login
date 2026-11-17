@@ -595,5 +595,90 @@ class OfflineOAuthRefreshTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(instance.persisted, [])
 
 
+class OAuthHttpPrivacyTests(unittest.TestCase):
+    """Exercise the canonical HTTP debug logger without enabling anonymization.
+
+    No Home Assistant imports, real tokens, network, or runtime writes.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        import copy
+        import logging
+        from urllib.parse import urlsplit
+
+        path = ROOT / "custom_components" / "stellantis_vehicles" / "stellantis.py"
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        selected = [copy.deepcopy(n) for n in tree.body if isinstance(n, ast.FunctionDef)
+                    and n.name in ("_safe_http_endpoint", "_log_http_exchange")]
+        assert len(selected) == 2, "Expected the two existing HTTP logger functions"
+
+        class LogCapture:
+            def __init__(self):
+                self.messages = []
+            def isEnabledFor(self, _level):
+                return True
+            def debug(self, template, *args):
+                self.messages.append(template % args)
+
+        cls.capture = LogCapture()
+        scope = {"logging": logging, "urlsplit": urlsplit, "_LOGGER": cls.capture}
+        mod = ast.fix_missing_locations(ast.Module(body=selected, type_ignores=[]))
+        exec(compile(mod, str(path), "exec"), scope)
+        # Functions attached to a test class are descriptors: bind them as
+        # staticmethods so unittest does not inject an unintended `self`.
+        cls.safe_endpoint = staticmethod(scope["_safe_http_endpoint"])
+        cls.log_exchange = staticmethod(scope["_log_http_exchange"])
+
+    def setUp(self):
+        self.capture.messages.clear()
+
+    def test_oauth_exchange_debug_never_logs_secrets_without_anonymization(self):
+        url = ("https://idpcvs.peugeot.com/am/oauth2/access_token?"
+               "grant_type=authorization_code&code=FAKE-CODE-ONLY-TEST")
+        self.log_exchange(
+            url,
+            {"Authorization": "Basic FAKE-APP-CREDENTIALS-ONLY-TEST"},
+            {"access_token": "FAKE-ACCESS-ONLY-TEST",
+             "refresh_token": "FAKE-REFRESH-ONLY-TEST",
+             "id_token": "FAKE-ID-ONLY-TEST"},
+            debug_data={"password": "FAKE-PASSWORD-ONLY-TEST"},
+        )
+        text = "\n".join(self.capture.messages)
+        self.assertIn("idpcvs.peugeot.com/am/oauth2/access_token", text)
+        for private in ("FAKE-CODE", "FAKE-APP", "FAKE-ACCESS", "FAKE-REFRESH",
+                        "FAKE-ID", "FAKE-PASSWORD", "?", "Authorization"):
+            self.assertNotIn(private, text)
+
+    def test_refresh_endpoint_only_logs_public_path(self):
+        endpoint = self.safe_endpoint(
+            "https://someone:pass@idpcvs.peugeot.com/am/oauth2/access_token?"
+            "grant_type=refresh_token&refresh_token=FAKE-REFRESH-ONLY-TEST#fragment")
+        self.assertEqual(endpoint, "https://idpcvs.peugeot.com/am/oauth2/access_token")
+        self.assertEqual(self.safe_endpoint("broken-url?token=FAKE-ONLY-TEST"), "<invalid-endpoint>")
+
+    def test_http_failure_logs_never_log_raw_url_headers_response_or_exception(self):
+        src = (ROOT / "custom_components" / "stellantis_vehicles" / "stellantis.py")
+        tree = ast.parse(src.read_text(encoding="utf-8"))
+        owner = next(c for c in tree.body if isinstance(c, ast.ClassDef)
+                     and c.name == "StellantisBase")
+        method = next(f for f in owner.body if isinstance(f, ast.AsyncFunctionDef)
+                      and f.name == "make_http_request")
+        unsafe = {"url", "headers", "params", "json_data", "data", "result", "e", "refresh_err"}
+        found_log_calls = 0
+        for call in ast.walk(method):
+            if not (isinstance(call, ast.Call) and isinstance(call.func, ast.Attribute)
+                    and isinstance(call.func.value, ast.Name)
+                    and call.func.value.id == "_LOGGER"):
+                continue
+            found_log_calls += 1
+            for arg in call.args:
+                self.assertFalse(isinstance(arg, ast.Name) and arg.id in unsafe,
+                                 f"Unsafe raw log argument: {getattr(arg, 'id', '')}")
+        self.assertGreaterEqual(found_log_calls, 4)
+        self.assertNotIn("_LOGGER.exception", ast.get_source_segment(
+            src.read_text(encoding="utf-8"), method))
+
+
 if __name__ == "__main__":
     unittest.main()

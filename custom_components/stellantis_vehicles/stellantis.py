@@ -1,4 +1,5 @@
 import logging
+from urllib.parse import urlsplit
 import aiohttp
 import base64
 from PIL import Image, ImageOps
@@ -86,27 +87,27 @@ _LOGGER = logging.getLogger(__name__)
 _LOGGER.addFilter(SENSITIVE_DATA_FILTER)
 
 
-# Request body fields that are never logged, whatever the anonymize option:
-# the account credentials, and the OTP code (also sent as "password").
-_UNLOGGED_BODY_KEYS = ("email", "password")
+def _safe_http_endpoint(url):
+    """Log a non-secret endpoint, never its query, fragment, or userinfo.
 
-
-def _redact_body(body):
-    """Return a request body with its credential fields replaced by '###', for logging."""
-    if not isinstance(body, dict):
-        return body
-    return {key: "###" if key in _UNLOGGED_BODY_KEYS and value else value for key, value in body.items()}
+    OAuth authorization codes and refresh tokens appear in query parameters.
+    This safety invariant applies even when anonymization is disabled and
+    before a configuration entry exists.
+    """
+    try:
+        parsed = urlsplit(url)
+        if not parsed.scheme or not parsed.hostname:
+            return "<invalid-endpoint>"
+        return f"{parsed.scheme}://{parsed.hostname}{parsed.path}"
+    except (TypeError, ValueError):
+        return "<invalid-endpoint>"
 
 
 def _log_http_exchange(url, headers, response, **extra):
-    """Debug-log an HTTP request and its decoded response as a single record."""
+    """Debug-log only endpoint metadata, never headers, bodies or tokens."""
     if not _LOGGER.isEnabledFor(logging.DEBUG):
         return
-    details = "".join(f" {key}={value!r}" for key, value in extra.items())
-    _LOGGER.debug(
-        "HTTP exchange | url=%s headers=%s%s | response=%s",
-        url, headers, details, response,
-    )
+    _LOGGER.debug("HTTP exchange | endpoint=%s", _safe_http_endpoint(url))
 
 
 # Some Stellantis MQTT servers drop packets with a TCP payload greater than 1456 bytes
@@ -273,8 +274,8 @@ class StellantisBase:
                         error = result["message"] + " - " + str(result["code"])
 
                     _LOGGER.debug(
-                        "HTTP %s %s failed with status %s | headers=%s params=%s json=%s data=%s | response=%s",
-                        method, url, resp.status, headers, params, _redact_body(json_data), _redact_body(data), result,
+                        "HTTP %s %s failed with status %s",
+                        method, _safe_http_endpoint(url), resp.status,
                     )
 
                     if str(resp.status) == "404" and str(result.get("code")) == "40400":
@@ -308,7 +309,7 @@ class StellantisBase:
                             except (CommunicationError, RateLimitException) as refresh_err:
                                 # ConfigEntryAuthFailed (dead refresh token) is left
                                 # to propagate so Home Assistant starts reauth.
-                                _LOGGER.debug("Token refresh before retry failed: %s", refresh_err)
+                                _LOGGER.debug("Token refresh before retry failed (%s)", type(refresh_err).__name__)
                             else:
                                 new_token = (self.get_config("oauth") or {}).get("access_token")
                                 if headers and "Authorization" in headers and new_token:
@@ -324,20 +325,21 @@ class StellantisBase:
                 return result
         except asyncio.TimeoutError as e:
             await self.close_session()
-            _LOGGER.warning("Request to %s timed out: %s", url, e)
+            _LOGGER.warning("Request to %s timed out", _safe_http_endpoint(url))
             # Connection error
             raise CommunicationError("Request timeout") from e
         except aiohttp.client_exceptions.ClientError as e:
             await self.close_session()
-            _LOGGER.warning("Request to %s failed: %s", url, e)
+            _LOGGER.warning("Request to %s failed", _safe_http_endpoint(url))
             # Connection error
-            raise CommunicationError(e) from e
+            raise CommunicationError("Stellantis HTTP connection failed") from None
         except (ConfigEntryAuthFailed, CommunicationError):
             await self.close_session()
             raise
-        except Exception:
+        except Exception as exc:
             await self.close_session()
-            _LOGGER.exception("Unexpected error during request to %s", url)
+            _LOGGER.error("Unexpected error during request to %s (%s)",
+                          _safe_http_endpoint(url), type(exc).__name__)
             raise
 
     def do_async(self, async_func, delay=0, *, wait):
