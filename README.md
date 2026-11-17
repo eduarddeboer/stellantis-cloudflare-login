@@ -121,6 +121,31 @@ A read-only `502` is not proof that a real login fails.
 Do **not** deploy the changed Worker or test with the live account
 before reviewing these results and any official provider redirects.
 
+## Staging check: HTTP 403, unresolved (17 November 2026)
+
+The Mac run on commit `1a2973c` passed **59 Python and 39 Worker
+tests** (including typechecking and the staging Wrangler dry-run).
+The separate credential-free staging probe then returned
+`Host allowlist: HTTP 403; allowed=False` and correctly skipped the
+public-page Browser Rendering test. **The HTTP 403 is not a validated
+allowlist decision**, and the public Peugeot login page was not tested.
+
+A source/target discrepancy was identified: `worker/wrangler.toml`
+declares `stellantis-cloudflare-login` with a `staging` environment,
+which ordinarily targets Worker service
+`stellantis-cloudflare-login-staging`. The hostname previously used
+in the probe contained `stellantis-cloudflare-worker-staging` instead.
+That discrepancy is confirmed; whether it caused HTTP 403 is **not yet
+proven**. Cloudflare Access/Browser Integrity Check is another possible
+cause (especially for the default Python urllib User-Agent).
+
+**Next evidence:** read-only `npx wrangler deployments list --env staging`
+and an unauthenticated `GET /health` of the verified deployment hostname.
+Do not repeat the authenticated `/validate` request until the intended
+deployment/hostname is established. Do not rotate or reveal an API key,
+lower access controls, deploy the Worker, or enter Peugeot credentials
+merely to overcome this unresolved 403. See `worker/README.md`.
+
 ## HACS prerelease requirements
 
 The root `hacs.json` declares `zip_release: true`. An actual GitHub release
