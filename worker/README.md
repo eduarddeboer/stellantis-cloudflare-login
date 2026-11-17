@@ -36,6 +36,28 @@ The staging deployment is **explicit**; no CI workflow deploys a Worker. `wrangl
 
 Browser limits, changes in login form, CAPTCHA and other interactive verification can cause legitimate failure. No CAPTCHA bypass is implemented. The Worker applies a Cloudflare Rate Limiting binding to **authenticated, well-formed `POST /` login requests** before opening a browser: **3 attempts per 60 seconds per Cloudflare location**. Rejected attempts receive HTTP 429. If the binding is missing or fails, login fails closed with HTTP 503. This does not rate-limit `GET /health`, `POST /validate` or the two diagnosis endpoints. The fixed quota key is not a password, email, API key, IP address, token or authorization code. **This limit is approximate and cannot guarantee a global concurrency cap or prevent all login bursts.** Cloudflare Browser Rendering quota limits apply independently.
 
+## OAuth authorize URL and navigation trust
+
+The credential-bearing `POST /` endpoint and the read-only
+`POST /login-page-check` endpoint use the **same canonical URL policy**:
+only an HTTPS OAuth authorization URL on an explicitly allowlisted
+provider host at `/am/oauth2/authorize`, with the required OAuth
+parameters and a Stellantis/PSA mobile-app callback
+(`mymap`, `mymacsdk`, `mymdssdk`, `mymopsdk` or `mymvxsdk`) is accepted.
+Unexpected/duplicate query parameters and arbitrary third-party
+redirect URIs are rejected before opening the browser.
+
+After browser navigation the Worker verifies that the top-level login
+page remains on the exact allowlisted host before inserting the email
+or password. **This is a fail-closed safety check, not a claim that
+all redirects are harmless.** Some legitimate Peugeot login journeys
+might use a different main-frame host; the stricter policy must be
+verified in staging before any live account-based acceptance. Do not
+extend the hostname allowlist just to bypass a failure without first
+verifying the official provider flow. Read-only `/validate` and
+`/login-page-check` can diagnose the provider without submitting
+credentials.
+
 The `[[ratelimits]]` and `[[env.staging.ratelimits]]` bindings in `wrangler.toml` are environment-specific, with different namespace IDs. If you already use either namespace ID within the same Cloudflare account, choose your own distinct positive-integer IDs. Never remove a rate-limit binding without also changing the login policy; an unbound login intentionally responds HTTP 503. Any production deployment still needs isolated end-to-end and rollback acceptance.
 
 **Never run real account logins in GitHub Actions or publish logs containing email/password, codes, tokens, cookies or OAuth URLs with query parameters.**
