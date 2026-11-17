@@ -55,12 +55,14 @@ OAUTH_MANUAL_SCHEMA = vol.Schema({
     vol.Required(FIELD_OAUTH_CODE): str
 })
 
-def OAUTH_REMOTE_SCHEMA(default_oauth_code_url=None):
-    # Require an owned Worker URL. Reauth may prefill only a previously saved URL.
+def OAUTH_REMOTE_SCHEMA(default_oauth_code_url=None, default_email=None):
+    # Refill only non-secret fields. Never send passwords/API keys back as form defaults.
     worker_url = (vol.Required(FIELD_OAUTH_CODE_URL, default=default_oauth_code_url)
                   if default_oauth_code_url else vol.Required(FIELD_OAUTH_CODE_URL))
+    email_field = (vol.Required(CONF_EMAIL, default=default_email)
+                   if default_email else vol.Required(CONF_EMAIL))
     return vol.Schema({
-        vol.Required(CONF_EMAIL): str,
+        email_field: str,
         vol.Required(CONF_PASSWORD): str,
         worker_url: str,
         # Keep optional for reauth: an unchanged URL may reuse its saved key.
@@ -173,7 +175,8 @@ class StellantisVehiclesConfigFlow(ConfigFlow, domain=DOMAIN):
                 # Never submit credentials or silently fall back to another service.
                 return self.async_show_form(
                     step_id="oauth_remote",
-                    data_schema=OAUTH_REMOTE_SCHEMA(old_url),
+                    data_schema=OAUTH_REMOTE_SCHEMA(
+                        user_input.get(FIELD_OAUTH_CODE_URL), user_input.get(CONF_EMAIL)),
                     errors={FIELD_OAUTH_CODE_URL: "invalid_worker_url"},
                     description_placeholders=TRANSLATION_PLACEHOLDERS,
                 )
@@ -182,6 +185,20 @@ class StellantisVehiclesConfigFlow(ConfigFlow, domain=DOMAIN):
             old_key = (self.data.get(FIELD_OAUTH_WORKER_API_KEY)
                        if worker_url == normalized_worker_url(old_url) else None)
             worker_key = user_input.get(FIELD_OAUTH_WORKER_API_KEY) or old_key
+            # Show actionable field errors without leaving this step or contacting
+            # the Worker. Authorization remains enforced in StellantisOauth.
+            field_errors = {}
+            if not worker_key:
+                field_errors[FIELD_OAUTH_WORKER_API_KEY] = "worker_key_required"
+            if not user_input.get(FIELD_OAUTH_WORKER_TRUST, False):
+                field_errors[FIELD_OAUTH_WORKER_TRUST] = "worker_owner_confirmation_required"
+            if field_errors:
+                return self.async_show_form(
+                    step_id="oauth_remote",
+                    data_schema=OAUTH_REMOTE_SCHEMA(worker_url, user_input.get(CONF_EMAIL)),
+                    errors=field_errors,
+                    description_placeholders=TRANSLATION_PLACEHOLDERS,
+                )
             code_request = await self.stellantis.get_oauth_code(
                 user_input[CONF_EMAIL], user_input[CONF_PASSWORD], selected_url,
                 worker_api_key=worker_key,
@@ -191,9 +208,16 @@ class StellantisVehiclesConfigFlow(ConfigFlow, domain=DOMAIN):
             message = self.get_error_message("get_oauth_code", e)
             if self.source == SOURCE_RECONFIGURE:
                 return self.async_abort(reason=message)
-            self.errors[FIELD_OAUTH_MANUAL_MODE] = message
             await self.stellantis.hass_notify("get_oauth_code")
-            return await self.async_step_oauth_mode()
+            # Stay on the Worker step, and refill only email and URL.
+            # Passwords and API keys must never be echoed in form defaults.
+            return self.async_show_form(
+                step_id="oauth_remote",
+                data_schema=OAUTH_REMOTE_SCHEMA(
+                    user_input.get(FIELD_OAUTH_CODE_URL), user_input.get(CONF_EMAIL)),
+                errors={"base": "get_oauth_code"},
+                description_placeholders=TRANSLATION_PLACEHOLDERS,
+            )
 
         self.data[FIELD_OAUTH_CODE_URL] = worker_url
         self.data[FIELD_OAUTH_WORKER_API_KEY] = worker_key

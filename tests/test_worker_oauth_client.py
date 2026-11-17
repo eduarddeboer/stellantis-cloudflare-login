@@ -146,7 +146,7 @@ class ConfigFlowReauthTests(unittest.IsolatedAsyncioTestCase):
             "CONF_PASSWORD": "password",
             "TRANSLATION_PLACEHOLDERS": {},
             "SOURCE_RECONFIGURE": "reconfigure",
-            "OAUTH_REMOTE_SCHEMA": lambda old=None: {"prefill": old},
+            "OAUTH_REMOTE_SCHEMA": lambda old=None, email=None: {"prefill": old, "email": email},
             "normalized_worker_url": module.normalized_worker_url,
         }
         exec(compile(standalone, str(flow_path), "exec"), namespace)
@@ -218,8 +218,10 @@ class ConfigFlowReauthTests(unittest.IsolatedAsyncioTestCase):
     async def test_different_worker_must_not_reuse_key(self):
         flow = self.new_flow(saved_url="https://first.example.workers.dev/",
                              saved_key="existing-secret-not-real")
-        await flow.async_step_oauth_remote(self.user_input("https://second.example.workers.dev/"))
-        self.assertIsNone(flow.stellantis.calls[0]["key"])
+        result = await flow.async_step_oauth_remote(self.user_input("https://second.example.workers.dev/"))
+        self.assertEqual(result["step_id"], "oauth_remote")
+        self.assertEqual(result["errors"], {"oauth_worker_api_key": "worker_key_required"})
+        self.assertEqual(flow.stellantis.calls, [])
 
     async def test_explicit_key_for_new_worker_is_respected(self):
         flow = self.new_flow(saved_url="https://first.example.workers.dev/",
@@ -235,6 +237,63 @@ class ConfigFlowReauthTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["errors"], {"oauth_code_url": "invalid_worker_url"})
         self.assertEqual(flow.stellantis.calls, [])
         self.assertEqual(flow.stellantis.saved, [])
+
+    async def test_missing_consent_returns_to_same_step_without_oauth_call(self):
+        flow = self.new_flow()
+        values = self.user_input("https://testworker.example.workers.dev/",
+                                 override_key="test-key-not-real-123456789012")
+        values["oauth_worker_trust_confirm"] = False
+        result = await flow.async_step_oauth_remote(values)
+        self.assertEqual(result["step_id"], "oauth_remote")
+        self.assertEqual(result["errors"],
+                         {"oauth_worker_trust_confirm": "worker_owner_confirmation_required"})
+        self.assertEqual(result["data_schema"]["email"], "tester@example.invalid")
+        self.assertEqual(result["data_schema"]["prefill"], values["oauth_code_url"])
+        self.assertNotIn("password", result["data_schema"])
+        self.assertNotIn("oauth_worker_api_key", result["data_schema"])
+        self.assertEqual(flow.stellantis.calls, [])
+
+    async def test_missing_key_returns_same_step_without_oauth_call(self):
+        flow = self.new_flow()
+        result = await flow.async_step_oauth_remote(
+            self.user_input("https://testworker.example.workers.dev/"))
+        self.assertEqual(result["step_id"], "oauth_remote")
+        self.assertEqual(result["errors"], {"oauth_worker_api_key": "worker_key_required"})
+        self.assertEqual(flow.stellantis.calls, [])
+
+    async def test_missing_both_constraints_reports_both(self):
+        flow = self.new_flow()
+        values = self.user_input("https://testworker.example.workers.dev/")
+        values["oauth_worker_trust_confirm"] = False
+        result = await flow.async_step_oauth_remote(values)
+        self.assertEqual(result["step_id"], "oauth_remote")
+        self.assertEqual(set(result["errors"]),
+                         {"oauth_worker_api_key", "oauth_worker_trust_confirm"})
+        self.assertEqual(flow.stellantis.calls, [])
+
+    async def test_invalid_url_keeps_entered_nonsecret_values(self):
+        flow = self.new_flow()
+        result = await flow.async_step_oauth_remote(
+            self.user_input("https://invalid.example/"))
+        self.assertEqual(result["step_id"], "oauth_remote")
+        self.assertEqual(result["data_schema"]["email"], "tester@example.invalid")
+        self.assertEqual(result["data_schema"]["prefill"], "https://invalid.example/")
+        self.assertEqual(flow.stellantis.calls, [])
+
+    async def test_oauth_failure_stays_on_same_step_without_echoing_secrets(self):
+        flow = self.new_flow()
+        async def refused(*args, **kwargs):
+            raise RuntimeError("provider error: not-for-UI")
+        flow.stellantis.get_oauth_code = refused
+        result = await flow.async_step_oauth_remote(self.user_input(
+            "https://testworker.example.workers.dev/",
+            override_key="test-key-not-real-123456789012"))
+        self.assertEqual(result["step_id"], "oauth_remote")
+        self.assertEqual(result["errors"], {"base": "get_oauth_code"})
+        self.assertEqual(result["data_schema"]["email"], "tester@example.invalid")
+        self.assertNotIn("password", result["data_schema"])
+        self.assertNotIn("oauth_worker_api_key", result["data_schema"])
+
 
 if __name__ == "__main__":
     unittest.main()

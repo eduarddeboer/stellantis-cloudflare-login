@@ -12,7 +12,7 @@
         }
       },
       "oauth_mode": {
-        "description": "To authenticate your account, a remote service is used that does not store your credentials in any way, alternatively you can use the manual method",
+        "description": "Choose how to sign in: automatically through your own Cloudflare Worker, or manually through the vehicle app login page. Your password is not sent to a shared login service.",
         "data": {
           "oauth_manual_mode": "Use the manual method"
         }
@@ -64,6 +64,8 @@
     "error": {
       "get_oauth_code": "Get oauth code error",
       "invalid_worker_url": "Enter your own HTTPS NAME.ACCOUNT.workers.dev URL",
+      "worker_key_required": "Enter your Cloudflare Worker API key.",
+      "worker_owner_confirmation_required": "Confirm that this Cloudflare Worker belongs to you.",
       "get_access_token": "Get access token error",
       "get_user_info": "Get user info error",
       "missing_user_info": "Missing user info error",
