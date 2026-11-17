@@ -119,5 +119,122 @@ class ControlOwnershipTests(unittest.TestCase):
                 self.assertIn("oauth_code_url", remote.get("data", {}))
 
 
+
+class ConfigFlowReauthTests(unittest.IsolatedAsyncioTestCase):
+    """Execute the actual config-flow owner method with offline HA substitutes.
+
+    Never import Home Assistant, launch a browser or perform an HTTP request.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        import copy
+        flow_path = ROOT / "custom_components/stellantis_vehicles/config_flow.py"
+        tree = ast.parse(flow_path.read_text(encoding="utf-8"))
+        owner = next(node for node in tree.body
+                     if isinstance(node, ast.ClassDef) and node.name == "StellantisVehiclesConfigFlow")
+        method = next(node for node in owner.body
+                      if isinstance(node, ast.AsyncFunctionDef)
+                      and node.name == "async_step_oauth_remote")
+        standalone = ast.fix_missing_locations(ast.Module(body=[copy.deepcopy(method)], type_ignores=[]))
+        namespace = {
+            "FIELD_OAUTH_CODE_URL": "oauth_code_url",
+            "FIELD_OAUTH_WORKER_API_KEY": "oauth_worker_api_key",
+            "FIELD_OAUTH_WORKER_TRUST": "oauth_worker_trust_confirm",
+            "CONF_EMAIL": "email",
+            "CONF_PASSWORD": "password",
+            "TRANSLATION_PLACEHOLDERS": {},
+            "SOURCE_RECONFIGURE": "reconfigure",
+            "OAUTH_REMOTE_SCHEMA": lambda old=None: {"prefill": old},
+            "normalized_worker_url": module.normalized_worker_url,
+        }
+        exec(compile(standalone, str(flow_path), "exec"), namespace)
+        cls.handler = namespace["async_step_oauth_remote"]
+
+    def new_flow(self, *, saved_url=None, saved_key=None):
+        class FakeStellantis:
+            def __init__(self):
+                self.calls = []
+                self.saved = []
+            async def get_oauth_code(self, email, password, url, **kwargs):
+                self.calls.append({"url": url, "key": kwargs.get("worker_api_key"),
+                                   "confirmed": kwargs.get("worker_trust_confirm")})
+                return {"code": "dummy-code-not-real"}
+            def save_config(self, data):
+                self.saved.append(data)
+            async def hass_notify(self, *args):
+                pass
+
+        class FakeFlow:
+            source = "user"
+            def __init__(self):
+                self.data = {}
+                if saved_url is not None:
+                    self.data["oauth_code_url"] = saved_url
+                if saved_key is not None:
+                    self.data["oauth_worker_api_key"] = saved_key
+                self.stellantis = FakeStellantis()
+                self.errors = {}
+            def async_show_form(self, **kwargs):
+                return {"result": "form", **kwargs}
+            def get_error_message(self, key, message=None):
+                return "fixed-error"
+            async def async_step_oauth_mode(self):
+                return {"result": "oauth_mode"}
+            async def async_step_get_access_token(self):
+                return {"result": "token_stage"}
+
+        fake = FakeFlow()
+        fake.async_step_oauth_remote = type(self).handler.__get__(fake, FakeFlow)
+        return fake
+
+    def user_input(self, url, *, override_key=None):
+        supplied = {
+            "email": "tester@example.invalid", "password": "NOT-A-REAL-PASSWORD",
+            "oauth_code_url": url, "oauth_worker_trust_confirm": True,
+        }
+        if override_key is not None:
+            supplied["oauth_worker_api_key"] = override_key
+        return supplied
+
+    async def test_canonical_worker_url_reuses_saved_key(self):
+        """Same Worker entered without / or with host casing must retain key."""
+        key = "this-is-a-test-worker-key-not-a-secret"
+        flow = self.new_flow(saved_url="https://testworker.example.workers.dev/", saved_key=key)
+        outcome = await flow.async_step_oauth_remote(self.user_input(
+            "https://TESTWORKER.example.workers.dev"))
+        self.assertEqual(outcome["result"], "token_stage")
+        self.assertEqual(flow.stellantis.calls[0]["key"], key)
+        self.assertEqual(flow.data["oauth_code_url"], "https://testworker.example.workers.dev/")
+
+    async def test_exact_worker_url_keeps_key_normal_behavior(self):
+        key = "this-is-a-test-worker-key-not-a-secret"
+        url = "https://testworker.example.workers.dev/"
+        flow = self.new_flow(saved_url=url, saved_key=key)
+        await flow.async_step_oauth_remote(self.user_input(url))
+        self.assertEqual(flow.stellantis.calls[0]["key"], key)
+
+    async def test_different_worker_must_not_reuse_key(self):
+        flow = self.new_flow(saved_url="https://first.example.workers.dev/",
+                             saved_key="existing-secret-not-real")
+        await flow.async_step_oauth_remote(self.user_input("https://second.example.workers.dev/"))
+        self.assertIsNone(flow.stellantis.calls[0]["key"])
+
+    async def test_explicit_key_for_new_worker_is_respected(self):
+        flow = self.new_flow(saved_url="https://first.example.workers.dev/",
+                             saved_key="existing-secret-not-real")
+        await flow.async_step_oauth_remote(self.user_input(
+            "https://second.example.workers.dev/", override_key="NEW-KEY-NOT-REAL"))
+        self.assertEqual(flow.stellantis.calls[0]["key"], "NEW-KEY-NOT-REAL")
+
+    async def test_invalid_url_shows_form_without_oauth_request(self):
+        flow = self.new_flow()
+        result = await flow.async_step_oauth_remote(self.user_input("https://invalid.example/"))
+        self.assertEqual(result["result"], "form")
+        self.assertEqual(result["errors"], {"oauth_code_url": "invalid_worker_url"})
+        self.assertEqual(flow.stellantis.calls, [])
+        self.assertEqual(flow.stellantis.saved, [])
+
 if __name__ == "__main__":
     unittest.main()

@@ -177,8 +177,10 @@ class StellantisVehiclesConfigFlow(ConfigFlow, domain=DOMAIN):
                     errors={FIELD_OAUTH_CODE_URL: "invalid_worker_url"},
                     description_placeholders=TRANSLATION_PLACEHOLDERS,
                 )
+            # Canonicalize both endpoints: an optional slash or host casing
+            # must not discard the saved key for the same Worker on reauth.
             old_key = (self.data.get(FIELD_OAUTH_WORKER_API_KEY)
-                       if selected_url == old_url else None)
+                       if worker_url == normalized_worker_url(old_url) else None)
             worker_key = user_input.get(FIELD_OAUTH_WORKER_API_KEY) or old_key
             code_request = await self.stellantis.get_oauth_code(
                 user_input[CONF_EMAIL], user_input[CONF_PASSWORD], selected_url,
