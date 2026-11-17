@@ -5,6 +5,8 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
+import subprocess
 from pathlib import Path
 import zipfile
 
@@ -12,6 +14,31 @@ ROOT = Path(__file__).resolve().parents[1]
 COMPONENT = ROOT / "custom_components" / "stellantis_vehicles"
 DEFAULT_DEST = ROOT / "dist" / "stellantis_vehicles.zip"
 REQUIRED = {"__init__.py", "manifest.json", "worker_oauth_client.py", "config_flow.py", "translations/en.json"}
+
+def verify_release_source(expected_commit: str) -> str:
+    """Verify exact git HEAD and a clean checkout before tagging a release.
+
+    A matching manifest version alone cannot prove which commit produced an
+    archive. This check is opt-in for the final release-build command.
+    """
+    if not re.fullmatch(r"[0-9a-fA-F]{40}", expected_commit):
+        raise ValueError("Expected release commit must be a full 40-character SHA-1")
+    try:
+        head = subprocess.run(
+            ["git", "rev-parse", "--verify", "HEAD"], cwd=ROOT,
+            capture_output=True, text=True, check=True,
+        ).stdout.strip()
+        dirty = subprocess.run(
+            ["git", "status", "--porcelain", "--untracked-files=normal"], cwd=ROOT,
+            capture_output=True, text=True, check=True,
+        ).stdout
+    except (OSError, subprocess.CalledProcessError) as error:
+        raise ValueError("Cannot verify Git release source") from error
+    if head.lower() != expected_commit.lower():
+        raise ValueError("Release source HEAD does not match expected commit")
+    if dirty:
+        raise ValueError("Release source working tree is not clean")
+    return head
 
 
 def build(dest: Path, *, release_tag: str | None = None) -> tuple[int, int]:
@@ -67,7 +94,13 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, default=DEFAULT_DEST)
     parser.add_argument("--release-tag", help="Expected GitHub release tag; must equal manifest.json version")
+    parser.add_argument("--expected-commit", help="Full accepted Git commit SHA; verify exact HEAD and clean checkout")
     args = parser.parse_args()
+    if args.expected_commit and not args.release_tag:
+        parser.error("--expected-commit requires --release-tag")
+    if args.expected_commit:
+        actual = verify_release_source(args.expected_commit)
+        print(f"SOURCE: {actual} (clean checkout)")
     count, size = build(args.out, release_tag=args.release_tag)
     print(f"VALID: {args.out} ({count} integration files, {size} bytes); not published")
     # Keep a traceable digest of the exact bytes intended as the release asset.
