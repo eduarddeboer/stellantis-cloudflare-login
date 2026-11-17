@@ -12,17 +12,17 @@
         }
       },
       "oauth_mode": {
-        "description": "To authenticate your account, a remote service is used that does not store your credentials in any way, alternatively you can use the manual method",
+        "description": "Choose how to sign in: automatically through your own Cloudflare Worker, or manually through the vehicle app login page. Your password is not sent to a shared login service.",
         "data": {
           "oauth_manual_mode": "Use the manual method"
         }
       },
       "oauth_remote": {
-        "description": "This [remote service]({oauth_remote_link}) is used to simulate browser login on the official website. You can use the default hosted service or point to your own self-hosted deployment",
+        "description": "Use only your own Cloudflare Worker for browser login. Your login details are sent to your Worker. Alternatively, select manual OAuth login.",
         "data": {
           "email": "Email",
           "password": "Password",
-          "oauth_code_url": "Login service URL",
+          "oauth_code_url": "Your Cloudflare Worker URL",
           "oauth_worker_api_key": "Cloudflare Worker API key (only your own Worker)",
           "oauth_worker_trust_confirm": "I confirm this Worker belongs to my Cloudflare account (login credentials are sent there)"
         }
@@ -63,6 +63,10 @@
     },
     "error": {
       "get_oauth_code": "Get oauth code error",
+      "invalid_worker_url": "Enter your own HTTPS NAME.ACCOUNT.workers.dev URL",
+      "worker_key_required": "Enter your Cloudflare Worker API key.",
+      "worker_key_rejected": "Your Cloudflare Worker rejected the API key (HTTP 401). Check the key and the API_KEY secret in your own Worker.",
+      "worker_owner_confirmation_required": "Confirm that this Cloudflare Worker belongs to you.",
       "get_access_token": "Get access token error",
       "get_user_info": "Get user info error",
       "missing_user_info": "Missing user info error",

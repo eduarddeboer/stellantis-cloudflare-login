@@ -13,7 +13,7 @@ from homeassistant.const import (
 
 from .utils import extract_oauth_code, get_datetime, log_call
 from .stellantis import StellantisOauth
-from .worker_oauth_client import normalized_worker_url
+from .worker_oauth_client import normalized_worker_url, WorkerOAuthKeyRejected
 from .const import (
     DOMAIN,
     INTEGRATION_VERSION,
@@ -33,7 +33,6 @@ from .const import (
     FIELD_MQTT_LIVE_UPDATES,
     FIELD_RECONFIGURE,
     MQTT_REFRESH_TOKEN_TTL,
-    OAUTH_CODE_URL,
     TRANSLATION_PLACEHOLDERS
 )
 
@@ -56,11 +55,17 @@ OAUTH_MANUAL_SCHEMA = vol.Schema({
     vol.Required(FIELD_OAUTH_CODE): str
 })
 
-def OAUTH_REMOTE_SCHEMA(default_oauth_code_url=None):
+def OAUTH_REMOTE_SCHEMA(default_oauth_code_url=None, default_email=None):
+    # Refill only non-secret fields. Never send passwords/API keys back as form defaults.
+    worker_url = (vol.Required(FIELD_OAUTH_CODE_URL, default=default_oauth_code_url)
+                  if default_oauth_code_url else vol.Required(FIELD_OAUTH_CODE_URL))
+    email_field = (vol.Required(CONF_EMAIL, default=default_email)
+                   if default_email else vol.Required(CONF_EMAIL))
     return vol.Schema({
-        vol.Required(CONF_EMAIL): str,
+        email_field: str,
         vol.Required(CONF_PASSWORD): str,
-        vol.Optional(FIELD_OAUTH_CODE_URL, default=default_oauth_code_url or OAUTH_CODE_URL): str,
+        worker_url: str,
+        # Keep optional for reauth: an unchanged URL may reuse its saved key.
         vol.Optional(FIELD_OAUTH_WORKER_API_KEY): selector({"text": {"type": "password", "autocomplete": "off"}}),
         vol.Optional(FIELD_OAUTH_WORKER_TRUST, default=False): bool
     })
@@ -163,30 +168,60 @@ class StellantisVehiclesConfigFlow(ConfigFlow, domain=DOMAIN):
             return self.async_show_form(step_id="oauth_remote", data_schema=OAUTH_REMOTE_SCHEMA(self.data.get(FIELD_OAUTH_CODE_URL)), description_placeholders=TRANSLATION_PLACEHOLDERS)
 
         try:
-            selected_url = user_input.get(FIELD_OAUTH_CODE_URL, OAUTH_CODE_URL)
+            selected_url = user_input.get(FIELD_OAUTH_CODE_URL, "")
             old_url = self.data.get(FIELD_OAUTH_CODE_URL)
             worker_url = normalized_worker_url(selected_url)
+            if worker_url is None:
+                # Never submit credentials or silently fall back to another service.
+                return self.async_show_form(
+                    step_id="oauth_remote",
+                    data_schema=OAUTH_REMOTE_SCHEMA(
+                        user_input.get(FIELD_OAUTH_CODE_URL), user_input.get(CONF_EMAIL)),
+                    errors={FIELD_OAUTH_CODE_URL: "invalid_worker_url"},
+                    description_placeholders=TRANSLATION_PLACEHOLDERS,
+                )
+            # Canonicalize both endpoints: an optional slash or host casing
+            # must not discard the saved key for the same Worker on reauth.
             old_key = (self.data.get(FIELD_OAUTH_WORKER_API_KEY)
-                       if selected_url == old_url else None)
+                       if worker_url == normalized_worker_url(old_url) else None)
             worker_key = user_input.get(FIELD_OAUTH_WORKER_API_KEY) or old_key
+            # Show actionable field errors without leaving this step or contacting
+            # the Worker. Authorization remains enforced in StellantisOauth.
+            field_errors = {}
+            if not worker_key:
+                field_errors[FIELD_OAUTH_WORKER_API_KEY] = "worker_key_required"
+            if not user_input.get(FIELD_OAUTH_WORKER_TRUST, False):
+                field_errors[FIELD_OAUTH_WORKER_TRUST] = "worker_owner_confirmation_required"
+            if field_errors:
+                return self.async_show_form(
+                    step_id="oauth_remote",
+                    data_schema=OAUTH_REMOTE_SCHEMA(worker_url, user_input.get(CONF_EMAIL)),
+                    errors=field_errors,
+                    description_placeholders=TRANSLATION_PLACEHOLDERS,
+                )
             code_request = await self.stellantis.get_oauth_code(
                 user_input[CONF_EMAIL], user_input[CONF_PASSWORD], selected_url,
                 worker_api_key=worker_key,
                 worker_trust_confirm=user_input.get(FIELD_OAUTH_WORKER_TRUST, False),
             )
         except Exception as e:
-            message = self.get_error_message("get_oauth_code", e)
-            if self.source == SOURCE_RECONFIGURE:
-                return self.async_abort(reason=message)
-            self.errors[FIELD_OAUTH_MANUAL_MODE] = message
+            key_rejected = isinstance(e, WorkerOAuthKeyRejected)
+            if self.source == SOURCE_RECONFIGURE and not key_rejected:
+                return self.async_abort(reason=self.get_error_message("get_oauth_code", e))
             await self.stellantis.hass_notify("get_oauth_code")
-            return await self.async_step_oauth_mode()
+            # Stay on the Worker step, and refill only email and URL.
+            # Passwords and API keys must never be echoed in form defaults.
+            return self.async_show_form(
+                step_id="oauth_remote",
+                data_schema=OAUTH_REMOTE_SCHEMA(
+                    user_input.get(FIELD_OAUTH_CODE_URL), user_input.get(CONF_EMAIL)),
+                errors=({FIELD_OAUTH_WORKER_API_KEY: "worker_key_rejected"}
+                        if key_rejected else {"base": "get_oauth_code"}),
+                description_placeholders=TRANSLATION_PLACEHOLDERS,
+            )
 
-        self.data[FIELD_OAUTH_CODE_URL] = worker_url or selected_url
-        if worker_url:
-            self.data[FIELD_OAUTH_WORKER_API_KEY] = worker_key
-        else:
-            self.data.pop(FIELD_OAUTH_WORKER_API_KEY, None)
+        self.data[FIELD_OAUTH_CODE_URL] = worker_url
+        self.data[FIELD_OAUTH_WORKER_API_KEY] = worker_key
         self.stellantis.save_config({"oauth_code": code_request["code"]})
         return await self.async_step_get_access_token()
 

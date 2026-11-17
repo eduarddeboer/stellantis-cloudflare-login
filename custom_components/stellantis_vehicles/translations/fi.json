@@ -18,11 +18,11 @@
         }
       },
       "oauth_remote": {
-        "description": "Tätä [palvelua]({oauth_remote_link}) käytetään simuloimaan kirjautumista viralliselle nettisivulle. Voit käyttää oletusarvoista etäpalvelua tai omaa asennustasi.",
+        "description": "Käytä selaimella kirjautumiseen vain omaa Cloudflare Workeriasi. Kirjautumistietosi lähetetään omaan Workeriisi. Voit myös valita manuaalisen OAuth-kirjautumisen.",
         "data": {
           "email": "Sähköpostiosoite",
           "password": "Salasana",
-          "oauth_code_url": "Kirjautumispalvelun URL"
+          "oauth_code_url": "Oman Cloudflare Workerisi URL"
         }
       },
       "oauth_manual": {

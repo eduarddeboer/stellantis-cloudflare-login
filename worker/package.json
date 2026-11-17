@@ -1,0 +1,20 @@
+{
+  "name": "stellantis-cloudflare-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "check": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "@cloudflare/playwright": "^1.4.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260917.1",
+    "typescript": "^5.6.3",
+    "wrangler": "^4.0.0"
+  }
+}

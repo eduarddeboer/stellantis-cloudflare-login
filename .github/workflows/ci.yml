@@ -1,0 +1,79 @@
+name: Offline validation
+
+# Developer branches are validated locally; keep a CI safety net on main.
+# No PR runner starts automatically. Manual runs are available after this
+# workflow is present on the default branch.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  worker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install Worker dependencies
+        working-directory: worker
+        run: npm ci --no-audit --no-fund
+      - name: Typecheck Worker
+        working-directory: worker
+        run: npm run check
+      - name: Run credential-free Worker unit tests
+        working-directory: worker
+        run: npm test
+      - name: Validate Cloudflare bundle without deployment
+        working-directory: worker
+        run: npx wrangler deploy --dry-run --env staging --outdir ./dist
+  ha-static:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Compile Home Assistant integration
+        run: python3 -m compileall -q custom_components/stellantis_vehicles
+      - name: Test existing OAuth client and HACS release archive
+        run: python3 -m unittest discover -s tests -v
+      - name: Build and validate local HACS ZIP without publishing
+        run: python3 scripts/build_release_zip.py
+      - name: Validate component and Marketplace metadata
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          component = Path('custom_components/stellantis_vehicles')
+          manifest = json.loads((component / 'manifest.json').read_text())
+          hacs = json.loads(Path('hacs.json').read_text())
+          assert manifest['domain'] == 'stellantis_vehicles'
+          assert hacs['zip_release'] is True
+          assert hacs['filename'] == 'stellantis_vehicles.zip'
+          assert (component / 'worker_oauth_client.py').is_file()
+          print('Static metadata checked; release packaging still requires acceptance.')
+          PY
+
+  # Official release/catalog validators are never scheduled for every commit.
+  # They are invoked explicitly at the release gate after source review.
+  official-hacs:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Official HACS/Marketplace repository validation
+        uses: hacs/action@main
+        with:
+          category: integration
+
+  official-hassfest:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Official Home Assistant hassfest validation
+        uses: home-assistant/actions/hassfest@master

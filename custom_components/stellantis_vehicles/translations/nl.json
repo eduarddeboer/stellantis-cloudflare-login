@@ -12,16 +12,17 @@
         }
       },
       "oauth_mode": {
-        "description": "Om uw account te verifiëren, wordt een externe service gebruikt die uw inloggegevens op geen enkele manier opslaat. U kunt ook de handmatige methode gebruiken.",
+        "description": "Kies hoe je wilt aanmelden: automatisch via je eigen Cloudflare Worker, of handmatig via MyPeugeot. Je wachtwoord wordt niet naar een gedeelde inlogdienst gestuurd.",
         "data": {
           "oauth_manual_mode": "Gebruik de manuele methode"
         }
       },
       "oauth_remote": {
-        "description": "Deze [externe service]({oauth_remote_link}) wordt gebruikt om een browser login te simuleren op de officiële website",
+        "description": "Gebruik uitsluitend je eigen Cloudflare Worker om aan te melden. Je inloggegevens worden naar jouw Worker gestuurd. Je kunt ook kiezen voor handmatig aanmelden.",
         "data": {
           "email": "Email",
           "password": "Wachtwoord",
+          "oauth_code_url": "URL van je eigen Cloudflare Worker",
           "oauth_worker_api_key": "Cloudflare Worker API-sleutel (uitsluitend jouw eigen Worker)",
           "oauth_worker_trust_confirm": "Ik bevestig dat dit mijn eigen Cloudflare Worker is (mijn inloggegevens worden hierheen verstuurd)"
         }
@@ -62,6 +63,10 @@
     },
     "error": {
       "get_oauth_code": "Foutmelding bij het verkrijgen van een OAuth-code",
+      "invalid_worker_url": "Vul je eigen HTTPS NAME.ACCOUNT.workers.dev URL in",
+      "worker_key_required": "Vul je Cloudflare Worker API-sleutel in.",
+      "worker_key_rejected": "Je Cloudflare Worker weigert de API-sleutel (HTTP 401). Controleer de sleutel en het API_KEY-secret in je eigen Worker.",
+      "worker_owner_confirmation_required": "Bevestig dat deze Cloudflare Worker van jou is.",
       "get_access_token": "Foutmelding bij het verkrijgen van een access token",
       "get_user_info": "Foutmelding bij het verkrijgen van gebruikersinformatie",
       "missing_user_info": "Foutmelding door ontbrekende gebruikersinformatie",

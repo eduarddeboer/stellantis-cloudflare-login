@@ -15,6 +15,10 @@ class WorkerOAuthError(Exception):
     """Only fixed non-sensitive errors are emitted from this module."""
 
 
+class WorkerOAuthKeyRejected(WorkerOAuthError):
+    """The authenticated Worker endpoint returned HTTP 401."""
+
+
 _LABEL = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$")
 
 
@@ -84,7 +88,7 @@ async def get_code_from_worker(
                 allow_redirects=False,
             ) as response:
                 if response.status == 401:
-                    raise WorkerOAuthError("Worker API key rejected (HTTP 401)")
+                    raise WorkerOAuthKeyRejected("Worker API key rejected (HTTP 401)")
                 if response.status != 200:
                     # Do not echo arbitrary response status, body, URL or headers.
                     raise WorkerOAuthError("Worker authentication request failed")

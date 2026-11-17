@@ -18,11 +18,11 @@
         }
       },
       "oauth_remote": {
-        "description": "Questo [servizio remoto]({oauth_remote_link}) viene utilizzato per simulare un browser ed effettuare l'accesso sul sito web ufficiale",
+        "description": "Usa soltanto il tuo Cloudflare Worker per accedere. Le credenziali vengono inviate al tuo Worker. In alternativa puoi scegliere l’accesso OAuth manuale.",
         "data": {
           "email": "Email",
           "password": "Password",
-          "oauth_code_url": "URL servizio remoto di login"
+          "oauth_code_url": "URL del tuo Cloudflare Worker"
         }
       },
       "oauth_manual": {

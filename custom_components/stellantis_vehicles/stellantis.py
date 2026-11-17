@@ -1,4 +1,5 @@
 import logging
+from urllib.parse import urlsplit
 import aiohttp
 import base64
 from PIL import Image, ImageOps
@@ -29,7 +30,7 @@ from homeassistant.util.ssl import client_context
 
 from .base import StellantisVehicleCoordinator
 from .worker_oauth_client import (WorkerOAuthError, normalized_worker_url,
-                                  is_workers_dev_url, get_code_from_worker)
+                                  get_code_from_worker)
 from .otp.otp import Otp, save_otp, load_otp, ConfigException
 from .utils import ( get_datetime, rate_limit, SENSITIVE_DATA_FILTER, replace_string_placeholders, log_call, resolve_mqtt_resp_data_error )
 from .exceptions import ( CommunicationError, RateLimitException )
@@ -45,7 +46,6 @@ from .const import (
     MOBILE_APPS,
     OAUTH_AUTHORIZE_URL,
     OAUTH_TOKEN_URL,
-    OAUTH_CODE_URL,
     OAUTH_AUTHORIZE_QUERY_PARAMS,
     OAUTH_GET_TOKEN_QUERY_PARAMS,
     OAUTH_REFRESH_TOKEN_QUERY_PARAMS,
@@ -87,27 +87,27 @@ _LOGGER = logging.getLogger(__name__)
 _LOGGER.addFilter(SENSITIVE_DATA_FILTER)
 
 
-# Request body fields that are never logged, whatever the anonymize option:
-# the account credentials, and the OTP code (also sent as "password").
-_UNLOGGED_BODY_KEYS = ("email", "password")
+def _safe_http_endpoint(url):
+    """Log a non-secret endpoint, never its query, fragment, or userinfo.
 
-
-def _redact_body(body):
-    """Return a request body with its credential fields replaced by '###', for logging."""
-    if not isinstance(body, dict):
-        return body
-    return {key: "###" if key in _UNLOGGED_BODY_KEYS and value else value for key, value in body.items()}
+    OAuth authorization codes and refresh tokens appear in query parameters.
+    This safety invariant applies even when anonymization is disabled and
+    before a configuration entry exists.
+    """
+    try:
+        parsed = urlsplit(url)
+        if not parsed.scheme or not parsed.hostname:
+            return "<invalid-endpoint>"
+        return f"{parsed.scheme}://{parsed.hostname}{parsed.path}"
+    except (TypeError, ValueError):
+        return "<invalid-endpoint>"
 
 
 def _log_http_exchange(url, headers, response, **extra):
-    """Debug-log an HTTP request and its decoded response as a single record."""
+    """Debug-log only endpoint metadata, never headers, bodies or tokens."""
     if not _LOGGER.isEnabledFor(logging.DEBUG):
         return
-    details = "".join(f" {key}={value!r}" for key, value in extra.items())
-    _LOGGER.debug(
-        "HTTP exchange | url=%s headers=%s%s | response=%s",
-        url, headers, details, response,
-    )
+    _LOGGER.debug("HTTP exchange | endpoint=%s", _safe_http_endpoint(url))
 
 
 # Some Stellantis MQTT servers drop packets with a TCP payload greater than 1456 bytes
@@ -274,8 +274,8 @@ class StellantisBase:
                         error = result["message"] + " - " + str(result["code"])
 
                     _LOGGER.debug(
-                        "HTTP %s %s failed with status %s | headers=%s params=%s json=%s data=%s | response=%s",
-                        method, url, resp.status, headers, params, _redact_body(json_data), _redact_body(data), result,
+                        "HTTP %s %s failed with status %s",
+                        method, _safe_http_endpoint(url), resp.status,
                     )
 
                     if str(resp.status) == "404" and str(result.get("code")) == "40400":
@@ -309,7 +309,7 @@ class StellantisBase:
                             except (CommunicationError, RateLimitException) as refresh_err:
                                 # ConfigEntryAuthFailed (dead refresh token) is left
                                 # to propagate so Home Assistant starts reauth.
-                                _LOGGER.debug("Token refresh before retry failed: %s", refresh_err)
+                                _LOGGER.debug("Token refresh before retry failed (%s)", type(refresh_err).__name__)
                             else:
                                 new_token = (self.get_config("oauth") or {}).get("access_token")
                                 if headers and "Authorization" in headers and new_token:
@@ -325,20 +325,21 @@ class StellantisBase:
                 return result
         except asyncio.TimeoutError as e:
             await self.close_session()
-            _LOGGER.warning("Request to %s timed out: %s", url, e)
+            _LOGGER.warning("Request to %s timed out", _safe_http_endpoint(url))
             # Connection error
             raise CommunicationError("Request timeout") from e
         except aiohttp.client_exceptions.ClientError as e:
             await self.close_session()
-            _LOGGER.warning("Request to %s failed: %s", url, e)
+            _LOGGER.warning("Request to %s failed", _safe_http_endpoint(url))
             # Connection error
-            raise CommunicationError(e) from e
+            raise CommunicationError("Stellantis HTTP connection failed") from None
         except (ConfigEntryAuthFailed, CommunicationError):
             await self.close_session()
             raise
-        except Exception:
+        except Exception as exc:
             await self.close_session()
-            _LOGGER.exception("Unexpected error during request to %s", url)
+            _LOGGER.error("Unexpected error during request to %s (%s)",
+                          _safe_http_endpoint(url), type(exc).__name__)
             raise
 
     def do_async(self, async_func, delay=0, *, wait):
@@ -419,7 +420,7 @@ class StellantisOauth(StellantisBase):
         self.logger_filter.add_custom_value(password)
         if worker_api_key:
             self.logger_filter.add_custom_value(worker_api_key)
-        selected_url = code_url or OAUTH_CODE_URL
+        selected_url = code_url or ""
         worker_endpoint = normalized_worker_url(selected_url)
         if worker_endpoint is not None:
             if not worker_api_key or not worker_trust_confirm:
@@ -432,15 +433,9 @@ class StellantisOauth(StellantisBase):
             )
             self.logger_filter.add_custom_value(code)
             return {"code": code}
-        if is_workers_dev_url(selected_url):
-            raise WorkerOAuthError("Invalid Cloudflare Workers URL")
-        if worker_api_key or selected_url != OAUTH_CODE_URL:
-            raise WorkerOAuthError("Only default service or own Workers URL supported")
-        oauth_code_request = await self.make_http_request(selected_url, 'POST', None, None, {"url": self.get_oauth_url(), "email": email, "password": password}, None, 300)
-        if "code" in oauth_code_request:
-            self.logger_filter.add_custom_value(oauth_code_request["code"])
-        _LOGGER.debug("OAuth code response: %s", oauth_code_request)
-        return oauth_code_request
+        # Fail closed: the fork never transmits credentials to the old shared
+        # hosted login service. Users can choose manual OAuth instead.
+        raise WorkerOAuthError("Use your own HTTPS Worker URL or manual OAuth login")
 
     @log_call
     async def get_access_token(self):

@@ -1,0 +1,38 @@
+name = "stellantis-cloudflare-login"
+main = "src/index.ts"
+compatibility_date = "2026-11-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Keep variables managed in Cloudflare; API_KEY must be a Cloudflare Secret.
+keep_vars = true
+
+[browser]
+binding = "BROWSER"
+
+# Approximate Cloudflare per-location quota; never a worldwide concurrency lock.
+# Use distinct namespace IDs within each Cloudflare account/environment.
+[[ratelimits]]
+name = "LOGIN_RATE_LIMITER"
+namespace_id = "12617101"
+[ratelimits.simple]
+limit = 3
+period = 60
+
+# Account-isolated test deployment. No production deploy from CI.
+[env.staging]
+workers_dev = true
+
+[env.staging.browser]
+binding = "BROWSER"
+
+# Verified exact MyPeugeot NL OAuth hostname used by the earlier staging test.
+[env.staging.vars]
+ALLOWED_LOGIN_HOSTS = "idpcvs.peugeot.com"
+
+# Wrangler environment bindings are not inherited from the default environment.
+[[env.staging.ratelimits]]
+name = "LOGIN_RATE_LIMITER"
+namespace_id = "12617102"
+[env.staging.ratelimits.simple]
+limit = 3
+period = 60
