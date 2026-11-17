@@ -10,6 +10,7 @@ Security boundaries:
 
 - Each user operates their own Worker, authenticated via a Cloudflare Secret used as a Bearer token.
 - Only explicitly approved OAuth login hosts may receive login credentials; no wildcard domains or arbitrary redirects.
+- The Worker accepts only the known Stellantis OAuth authorization path and PSA mobile-app callback schemes for credential-bearing requests. The main-frame host is checked again before entering credentials; untrusted redirects fail closed. The provider's actual redirect journey still requires staging acceptance.
 - The Worker returns an authorization code; the Home Assistant integration is the sole owner of token exchange/refresh.
 - Do not disable access control to accommodate a client, bypass interactive verification, or deploy external PRs automatically.
 - An offline CI pass and `/health` are not evidence of live authentication or production readiness.
