@@ -36,6 +36,18 @@ not a Marketplace installation. No new live OAuth, rate-limit
 exhaustion, Cloudflare deployment, or production Home Assistant
 test was performed.
 
+**Source-locked local acceptance (17 November 2026, macOS):** commit
+`d999dd74f50e83146cc0d827b8868ade4d672be3` passed
+`bash scripts/check_local.sh` (final `PASS`, with offline Python and Worker
+checks and a Wrangler staging dry-run). The separate command with
+`--release-tag 2026.10.3-beta.3 --expected-commit
+d999dd74f50e83146cc0d827b8868ade4d672be3` reported
+`SOURCE: ... (clean checkout)`, `VALID` and `SHA256`:
+`0dba11ba3c349f811babdffa9b8225a81f5100e7a47aed8f4f1a8116c9c3c8be`.
+The displayed Mac excerpt does not repeat the Python/Worker test counts;
+the local acceptance script completed without error. The asset is still
+only a **local** build and has not been published or installed via Marketplace.
+
 
 - Worker and Home Assistant offline regression checks pass, including OAuth code-to-token
   simulation, token refresh, secret-safe HTTP diagnostics, login rate limiting and
