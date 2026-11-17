@@ -14,8 +14,8 @@ The Worker requests an OAuth *authorization code*. Home Assistant remains the ow
 This fork is **not production-ready**. Verified results to date:
 
 **Local acceptance evidence (17 November 2026, macOS):** commit
-`d121702` on `feat/open-source-worker-v03rc` passed
-`bash scripts/check_local.sh`: **44 Python tests, 34 Worker tests**,
+`2a63f7a` on `feat/open-source-worker-v03rc` passed
+`bash scripts/check_local.sh`: **45 Python tests, 34 Worker tests**,
 Python compilation, Worker TypeScript typecheck, and a valid,
 deterministic HACS ZIP (**44 integration files, 135306 bytes**).
 Wrangler's staging dry-run reported `BROWSER`,
@@ -23,11 +23,18 @@ Wrangler's staging dry-run reported `BROWSER`,
 `ALLOWED_LOGIN_HOSTS` bindings. The script reported `PASS`.
 The separate release-tag build
 `python3 scripts/build_release_zip.py --release-tag 2026.10.3-beta.3`
-also reported `VALID`. Incorrect and `v`-prefixed release tags were
-rejected by offline tests. This is **offline packaging acceptance**,
-not a published GitHub release or Marketplace installation. No new
-live OAuth, rate-limit exhaustion, Cloudflare deployment, or production
-Home Assistant test was performed.
+reported `VALID`. The builder's SHA-256, the separate tagged build's
+SHA-256 and macOS `shasum -a 256` agreed exactly:
+
+```text
+0dba11ba3c349f811babdffa9b8225a81f5100e7a47aed8f4f1a8116c9c3c8be
+```
+
+The checksum identifies the **locally built** archive, not a published
+GitHub release attachment. This is **offline packaging acceptance**,
+not a Marketplace installation. No new live OAuth, rate-limit
+exhaustion, Cloudflare deployment, or production Home Assistant
+test was performed.
 
 
 - Worker and Home Assistant offline regression checks pass, including OAuth code-to-token
