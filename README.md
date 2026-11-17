@@ -61,11 +61,40 @@ to `main` as a final safety net; PRs are not automatically run on GitHub.
 The root `hacs.json` declares `zip_release: true`. An actual GitHub release
 must therefore have a version/tag corresponding to the version in
 `custom_components/stellantis_vehicles/manifest.json` and a release asset
-named **`stellantis_vehicles.zip`** built by
-`python3 scripts/build_release_zip.py`. A local `dist/` ZIP or a successful
-CI run is **not** a published release. Release tags/assets are created only
-after the remaining isolated acceptance is complete. Preserve previous
-releases for rollback.
+named **`stellantis_vehicles.zip`**. Before any publication, run the
+full local suite and build the ZIP with an explicit, checked release tag:
+
+```sh
+bash scripts/check_local.sh
+python3 scripts/build_release_zip.py --release-tag 2026.10.3-beta.3
+```
+
+The argument is an **example tied to the current manifest version**; update
+it whenever `custom_components/stellantis_vehicles/manifest.json` changes.
+It must match the manifest `version` exactly (including beta suffix and
+without an added `v` prefix); otherwise the builder refuses to create the
+ZIP. Confirm that the release will point at the accepted **canonical
+repository commit**, not an older branch or an experimental private Worker.
+The resulting local `dist/stellantis_vehicles.zip` is *not* published.
+
+**Isolated prerelease acceptance plan (not yet executed):**
+
+1. Review the release notes, source and full local test evidence for the
+   exact tagged commit. Do not create a release while security/functional
+   acceptance gates are still open.
+2. Attach `stellantis_vehicles.zip` to a **GitHub prerelease** with the
+   same exact tag as the integration manifest; a Git tag alone is not enough.
+3. In a snapshot-protected **VirtualBox Home Assistant lab only**, add this
+   repository as a custom integration in HACS, enable prereleases as needed,
+   install the tagged prerelease, and confirm the expected configuration
+   UI **without signing in with the production MyPeugeot account**.
+4. Confirm uninstall, normal restart, and restoration from the VM snapshot.
+   Upgrade/downgrade acceptance additionally requires two known-good
+   published versions; do not claim rollback-to-previous-version tested
+   when no earlier version exists.
+
+A local `dist/` ZIP or a successful CI run is **not** a published release.
+Preserve previous published releases for future rollback.
 
 ## Safe setup
 
