@@ -56,6 +56,27 @@ as a last release-safety check; avoid using remote runners for every PR iteratio
 A passing local run does not substitute for isolated end-to-end OAuth,
 installation, and rollback acceptance.
 
+## Official checks at the release gate (not per commit)
+
+The existing `.github/workflows/ci.yml` also contains two **manual-only**
+jobs that execute the official `hacs/action@main` and
+`home-assistant/actions/hassfest@master` validators. They are conditioned
+on `workflow_dispatch`, so normal PR updates and pushes to `main` do
+not start these extra runners. Trigger them deliberately when preparing
+a public Marketplace/catalog submission, and record the run URL, commit
+and outcome in the PR.
+
+These official checks require GitHub Actions, unlike our local offline
+suite. They are not substitutes for live OAuth or isolated Marketplace
+installation and removal. **Do not treat a HACS validation of the
+default branch as validation of an unmerged feature branch**: when no
+release exists, HACS checks the default branch. Run them only when the
+intended release source is on `main` or as a published release, and
+verify which source was validated. A workflow can be manually dispatched
+once it exists on the default branch.
+
+
+
 Never include personal email addresses, passwords, API keys, OAuth authorization codes, tokens, browser cookies, private HTML, or raw OAuth callback URLs in issues, commits, logs or tests. For security reports see [SECURITY.md](SECURITY.md).
 
 Please preserve attribution and the licenses of third-party components.
