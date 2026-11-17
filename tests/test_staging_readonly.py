@@ -117,9 +117,16 @@ class StagingReadOnlyTests(unittest.TestCase):
                 ))
 
     def test_http_redirect_status_is_not_followed_or_treated_as_success(self):
+        redirect_errors = []
+
         class FakeOpener:
             def open(self, request, timeout):
-                raise HTTPError(request.full_url, 302, "Moved", {}, io.BytesIO(b'{"allowed":false}'))
+                error = HTTPError(
+                    request.full_url, 302, "Moved", {},
+                    io.BytesIO(b'{"allowed":false}'),
+                )
+                redirect_errors.append(error)
+                raise error
 
         with patch.object(module, "build_opener", return_value=FakeOpener()):
             status, data = module.inspect(
@@ -128,6 +135,8 @@ class StagingReadOnlyTests(unittest.TestCase):
             )
         self.assertEqual(status, 302)
         self.assertEqual(data, {"allowed": False})
+        self.assertEqual(len(redirect_errors), 1)
+        self.assertTrue(redirect_errors[0].closed)
 
     def test_report_never_echoes_untrusted_urls_secrets_or_provider_text(self):
         data = {
