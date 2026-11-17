@@ -88,6 +88,27 @@ and unit tests, and a **Wrangler staging dry-run**. It does not deploy, publish,
 or connect to a Peugeot account. GitHub Actions still runs on changes merged
 to `main` as a final safety net; PRs are not automatically run on GitHub.
 
+## Next isolated acceptance: public login page only
+
+After the strict Worker OAuth URL policy passed its Mac offline tests on
+commit `beb6a18`, the next test is intentionally **credential-free**:
+
+```sh
+python3 scripts/check_staging_readonly.py
+```
+
+This prompts for the owner's staging Worker root URL and hidden
+`API_KEY`. It constructs MyPeugeot NL's public OAuth authorize URL from
+the committed integration configuration and calls only read-only
+`/validate` and `/login-page-check`. It never submits Peugeot
+credentials, follows Worker redirects, publishes code, or exchanges tokens.
+Interpret the safe diagnostic page categories and HTTP status as evidence
+about the **currently deployed staging Worker only**. Its version has
+not yet been confirmed to contain the latest security code.
+A read-only `502` is not proof that a real login fails.
+Do **not** deploy the changed Worker or test with the live account
+before reviewing these results and any official provider redirects.
+
 ## HACS prerelease requirements
 
 The root `hacs.json` declares `zip_release: true`. An actual GitHub release
