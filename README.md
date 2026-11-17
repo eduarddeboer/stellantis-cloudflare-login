@@ -99,8 +99,11 @@ found a **false-positive assertion**: the public OAuth `scope`
 legitimately contains the word `email`. The request body itself has
 only a `url` field, not an email or password field. The assertion is
 now structural, and redirected HTTP error responses are closed to avoid
-a Python 3.14 `ResourceWarning`. These source/test fixes still require
-a new local acceptance run:
+a Python 3.14 `ResourceWarning`. The follow-up Mac run on
+commit `1a2973c` was reported **PASS** (59 Python and 39 Worker tests
+expected; detailed log not supplied). **The credential-free staging
+diagnosis remains unconfirmed** until its separate HTTP/status output
+is available:
 
 ```sh
 python3 scripts/check_staging_readonly.py
