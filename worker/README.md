@@ -57,6 +57,9 @@ from Cloudflare's access controls or Browser Integrity Check. The default
 Python `urllib` User-Agent is a known reason for Cloudflare-managed
 workers.dev blocks. Verify the hostname and origin of the response
 **before** changing code, keys, permissions or security policy.
+The local script now reports `result=unverified` for a non-200
+`/validate` response instead of displaying `allowed=False` as though
+a provider-host decision had been obtained.
 
 ## Credential-free staging acceptance from your Mac
 
