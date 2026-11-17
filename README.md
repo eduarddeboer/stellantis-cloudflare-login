@@ -74,6 +74,20 @@ bash scripts/check_local.sh
 python3 scripts/build_release_zip.py --release-tag 2026.10.3-beta.3
 ```
 
+The builder also prints `SHA256: <64 hexadecimal characters>` for the
+exact archive bytes. Record that digest with the release acceptance evidence
+and compare it to the **downloaded GitHub release asset** before approving
+Marketplace installation:
+
+```sh
+shasum -a 256 dist/stellantis_vehicles.zip
+shasum -a 256 /path/to/downloaded/stellantis_vehicles.zip
+```
+
+Both digests must be identical. An attached asset with the right filename but
+different contents is **not accepted**. This check does not validate an OAuth
+login or guarantee that the source commit has been independently audited.
+
 The argument is an **example tied to the current manifest version**; update
 it whenever `custom_components/stellantis_vehicles/manifest.json` changes.
 It must match the manifest `version` exactly (including beta suffix and
@@ -89,10 +103,15 @@ The resulting local `dist/stellantis_vehicles.zip` is *not* published.
    acceptance gates are still open.
 2. Attach `stellantis_vehicles.zip` to a **GitHub prerelease** with the
    same exact tag as the integration manifest; a Git tag alone is not enough.
-3. In a snapshot-protected **VirtualBox Home Assistant lab only**, add this
-   repository as a custom integration in HACS, enable prereleases as needed,
-   install the tagged prerelease, and confirm the expected configuration
-   UI **without signing in with the production MyPeugeot account**.
+3. After publishing the candidate with the checked ZIP attachment, in a
+   snapshot-protected **VirtualBox Home Assistant lab only**, open
+   **Settings → Marketplace → Add from link** and enter this GitHub repository.
+   Connect GitHub in Marketplace if prompted. Enable the repository's
+   **Pre-release** entity/switch under **Settings → Devices & services →
+   Marketplace** to offer prereleases. Confirm the selected tag and archive
+   checksum, install, and open the configuration UI **without signing in
+   with the production MyPeugeot account**. Home Assistant 2026.11+
+   has Marketplace built in; do not install a separate HACS integration.
 4. Confirm uninstall, normal restart, and restoration from the VM snapshot.
    Upgrade/downgrade acceptance additionally requires two known-good
    published versions; do not claim rollback-to-previous-version tested
@@ -100,6 +119,13 @@ The resulting local `dist/stellantis_vehicles.zip` is *not* published.
 
 A local `dist/` ZIP or a successful CI run is **not** a published release.
 Preserve previous published releases for future rollback.
+
+The public Marketplace **catalog** is a separate future milestone. Catalog
+listing requires a repository description and topics (currently missing),
+a published GitHub release, and passing official HACS and hassfest validations.
+These checks cannot be replaced by the local ZIP builder or simulated Python
+OAuth tests. We will run required public validations at the release gate
+instead of starting a GitHub runner for each development commit.
 
 ## Safe setup
 
