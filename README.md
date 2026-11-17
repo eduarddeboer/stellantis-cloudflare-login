@@ -63,9 +63,11 @@ only a **local** build and has not been published or installed via Marketplace.
 **Security review in progress:** the Worker now applies its canonical
 OAuth authorization-URL policy to credential-bearing requests, checks
 registered Stellantis mobile callback schemes, and rejects a changed
-top-level login hostname before filling credentials. This change is
-**not yet locally tested or deployed**; genuine Peugeot redirects may need
-a safe read-only staging diagnosis. Its presence does not prove that
+top-level login hostname before filling credentials. The hardened Worker
+passed the Mac offline acceptance on commit `beb6a18` (`PASS`
+reported without the detailed test log). It has **not** been
+redeployed to staging; genuine Peugeot redirects still require the
+safe read-only diagnosis. Passing offline tests does not prove that
 the complete real-account login succeeds.
 
 **Not yet accepted:** live rate-limit exhaustion (HTTP 429), full real-account
