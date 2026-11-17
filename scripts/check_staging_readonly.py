@@ -104,7 +104,10 @@ def inspect(endpoint: str, api_key: str, path: str, authorize_url: str) -> tuple
         with build_opener(NoRedirect).open(request, timeout=100) as response:
             status, raw = response.status, response.read(16385)
     except HTTPError as error:
-        status, raw = error.code, error.read(16385)
+        # HTTPError is a file-like response. Close even for redirected
+        # or rejected status codes to avoid leaking the response handle.
+        with error:
+            status, raw = error.code, error.read(16385)
     except (OSError, URLError):
         raise ValueError("Staging endpoint unreachable or timed out") from None
     if len(raw) > 16384:
