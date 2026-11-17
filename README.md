@@ -81,6 +81,36 @@ bash scripts/check_local.sh
 python3 scripts/build_release_zip.py --release-tag 2026.10.3-beta.3
 ```
 
+### Release source provenance
+
+The manifest version alone cannot prove which Git commit produced a ZIP:
+`main` and the development branch may both declare the same version.
+For a **final release-candidate build**, first check out the exact full
+40-character commit that passed acceptance, with no uncommitted files, then
+use the additional source guard:
+
+```sh
+git status --short
+git rev-parse HEAD
+python3 scripts/build_release_zip.py \
+  --release-tag 2026.10.3-beta.3 \
+  --expected-commit "$ACCEPTED_RELEASE_COMMIT"
+```
+
+Set `ACCEPTED_RELEASE_COMMIT` to the **full SHA from the accepted test
+evidence**, not automatically to whatever `git rev-parse HEAD` prints.
+The builder verifies the full SHA matches `HEAD` and refuses to build from
+a dirty checkout, missing Git metadata, or mismatched commit. It does not
+create a tag, publish an asset, or deploy a Worker. A dry-run without
+`--expected-commit` remains available for ordinary local development.
+
+**Marketplace source selection:** before the first GitHub release, the
+Marketplace uses the default branch (`main`). It does **not** install
+unmerged PR branch code just because the repository was added from a link.
+Do not install the current default branch as if it were the accepted PR.
+Only perform the tagged prerelease installation test after the exact
+accepted commit has a matching GitHub prerelease and verified ZIP asset.
+
 The builder also prints `SHA256: <64 hexadecimal characters>` for the
 exact archive bytes. Record that digest with the release acceptance evidence
 and compare it to the **downloaded GitHub release asset** before approving
