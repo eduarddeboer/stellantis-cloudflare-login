@@ -2,6 +2,10 @@
 from __future__ import annotations
 
 import importlib.util
+import hashlib
+import json
+import subprocess
+import sys
 from pathlib import Path
 import tempfile
 import unittest
@@ -73,6 +77,29 @@ class ReleasePackageTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "must exactly match"):
                 module.build(dest, release_tag=f"v{version}")
             self.assertFalse(dest.exists())
+
+
+    def test_release_cli_prints_digest_of_exact_archive_bytes(self):
+        with tempfile.TemporaryDirectory() as td:
+            manifest = json.loads(
+                (ROOT / "custom_components" / "stellantis_vehicles" / "manifest.json").read_text(encoding="utf-8")
+            )
+            dest = Path(td) / "stellantis_vehicles.zip"
+            result = subprocess.run(
+                [
+                    sys.executable, str(BUILDER),
+                    "--out", str(dest),
+                    "--release-tag", manifest["version"],
+                ],
+                cwd=ROOT,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            self.assertIn("VALID:", result.stdout)
+            expected = hashlib.sha256(dest.read_bytes()).hexdigest()
+            self.assertIn(f"SHA256: {expected}", result.stdout)
+            self.assertEqual(result.stdout.count("SHA256:"), 1)
 
 
 if __name__ == "__main__":
