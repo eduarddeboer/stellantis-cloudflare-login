@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -100,6 +101,53 @@ class ReleasePackageTests(unittest.TestCase):
             expected = hashlib.sha256(dest.read_bytes()).hexdigest()
             self.assertIn(f"SHA256: {expected}", result.stdout)
             self.assertEqual(result.stdout.count("SHA256:"), 1)
+
+
+    def test_release_source_accepts_matching_clean_commit(self):
+        expected = "a" * 40
+        replies = [
+            subprocess.CompletedProcess([], 0, stdout=expected + "\n"),
+            subprocess.CompletedProcess([], 0, stdout=""),
+        ]
+        with patch.object(module.subprocess, "run", side_effect=replies) as runner:
+            self.assertEqual(module.verify_release_source(expected), expected)
+        self.assertEqual(runner.call_count, 2)
+        for call in runner.call_args_list:
+            self.assertEqual(call.kwargs["cwd"], ROOT)
+            self.assertTrue(call.kwargs["check"])
+
+    def test_release_source_rejects_wrong_commit(self):
+        expected = "a" * 40
+        actual = "b" * 40
+        with patch.object(
+            module.subprocess, "run",
+            return_value=subprocess.CompletedProcess([], 0, stdout=actual + "\n"),
+        ):
+            with self.assertRaisesRegex(ValueError, "HEAD does not match"):
+                module.verify_release_source(expected)
+
+    def test_release_source_rejects_dirty_checkout(self):
+        expected = "a" * 40
+        replies = [
+            subprocess.CompletedProcess([], 0, stdout=expected + "\n"),
+            subprocess.CompletedProcess([], 0, stdout=" M custom_components/stellantis_vehicles/config_flow.py\n"),
+        ]
+        with patch.object(module.subprocess, "run", side_effect=replies):
+            with self.assertRaisesRegex(ValueError, "not clean"):
+                module.verify_release_source(expected)
+
+    def test_release_source_rejects_abbreviated_or_malformed_sha_without_git(self):
+        with patch.object(module.subprocess, "run") as runner:
+            for invalid in ("abc1234", "not-a-commit", "g" * 40, ""):
+                with self.subTest(invalid=invalid):
+                    with self.assertRaisesRegex(ValueError, "full 40-character"):
+                        module.verify_release_source(invalid)
+            runner.assert_not_called()
+
+    def test_release_source_fails_closed_if_git_unavailable(self):
+        with patch.object(module.subprocess, "run", side_effect=OSError("git unavailable")):
+            with self.assertRaisesRegex(ValueError, "Cannot verify"):
+                module.verify_release_source("a" * 40)
 
 
 if __name__ == "__main__":
