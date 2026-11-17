@@ -13,7 +13,7 @@ from homeassistant.const import (
 
 from .utils import extract_oauth_code, get_datetime, log_call
 from .stellantis import StellantisOauth
-from .worker_oauth_client import normalized_worker_url
+from .worker_oauth_client import normalized_worker_url, WorkerOAuthKeyRejected
 from .const import (
     DOMAIN,
     INTEGRATION_VERSION,
@@ -205,9 +205,9 @@ class StellantisVehiclesConfigFlow(ConfigFlow, domain=DOMAIN):
                 worker_trust_confirm=user_input.get(FIELD_OAUTH_WORKER_TRUST, False),
             )
         except Exception as e:
-            message = self.get_error_message("get_oauth_code", e)
-            if self.source == SOURCE_RECONFIGURE:
-                return self.async_abort(reason=message)
+            key_rejected = isinstance(e, WorkerOAuthKeyRejected)
+            if self.source == SOURCE_RECONFIGURE and not key_rejected:
+                return self.async_abort(reason=self.get_error_message("get_oauth_code", e))
             await self.stellantis.hass_notify("get_oauth_code")
             # Stay on the Worker step, and refill only email and URL.
             # Passwords and API keys must never be echoed in form defaults.
@@ -215,7 +215,8 @@ class StellantisVehiclesConfigFlow(ConfigFlow, domain=DOMAIN):
                 step_id="oauth_remote",
                 data_schema=OAUTH_REMOTE_SCHEMA(
                     user_input.get(FIELD_OAUTH_CODE_URL), user_input.get(CONF_EMAIL)),
-                errors={"base": "get_oauth_code"},
+                errors=({FIELD_OAUTH_WORKER_API_KEY: "worker_key_rejected"}
+                        if key_rejected else {"base": "get_oauth_code"}),
                 description_placeholders=TRANSLATION_PLACEHOLDERS,
             )
 

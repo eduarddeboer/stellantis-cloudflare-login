@@ -89,6 +89,27 @@ class WorkerClientTests(unittest.IsolatedAsyncioTestCase):
             self.assertIsNone(module.normalized_worker_url(url), url)
 
 
+    async def test_http_401_is_typed_key_rejection_not_generic_worker_failure(self):
+        session = FakeSession(FakeResponse(401, {"message": "untrusted-worker-text"}))
+        with self.assertRaises(module.WorkerOAuthKeyRejected) as ctx:
+            await module.get_code_from_worker(
+                session, email="example@example.invalid", password="secret-not-real",
+                authorize_url="https://example.invalid", api_key=API_KEY,
+                worker_url=ENDPOINT, confirmed=True,
+            )
+        self.assertNotIn("untrusted-worker-text", str(ctx.exception))
+
+    async def test_other_http_failures_do_not_masquerade_as_invalid_key(self):
+        session = FakeSession(FakeResponse(403, {"message": "irrelevant"}))
+        with self.assertRaises(module.WorkerOAuthError) as ctx:
+            await module.get_code_from_worker(
+                session, email="example@example.invalid", password="secret-not-real",
+                authorize_url="https://example.invalid", api_key=API_KEY,
+                worker_url=ENDPOINT, confirmed=True,
+            )
+        self.assertNotIsInstance(ctx.exception, module.WorkerOAuthKeyRejected)
+
+
 class ControlOwnershipTests(unittest.TestCase):
     def test_ha_remote_login_has_no_legacy_http_post(self):
         path = ROOT / "custom_components/stellantis_vehicles/stellantis.py"
@@ -148,6 +169,7 @@ class ConfigFlowReauthTests(unittest.IsolatedAsyncioTestCase):
             "SOURCE_RECONFIGURE": "reconfigure",
             "OAUTH_REMOTE_SCHEMA": lambda old=None, email=None: {"prefill": old, "email": email},
             "normalized_worker_url": module.normalized_worker_url,
+            "WorkerOAuthKeyRejected": module.WorkerOAuthKeyRejected,
         }
         exec(compile(standalone, str(flow_path), "exec"), namespace)
         cls.handler = namespace["async_step_oauth_remote"]
@@ -293,6 +315,39 @@ class ConfigFlowReauthTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["data_schema"]["email"], "tester@example.invalid")
         self.assertNotIn("password", result["data_schema"])
         self.assertNotIn("oauth_worker_api_key", result["data_schema"])
+
+    async def test_worker_http_401_reports_api_key_field_without_secret_leak(self):
+        flow = self.new_flow()
+        async def refused(*args, **kwargs):
+            raise module.WorkerOAuthKeyRejected("Worker API key rejected (HTTP 401)")
+        flow.stellantis.get_oauth_code = refused
+        result = await flow.async_step_oauth_remote(self.user_input(
+            ENDPOINT, override_key="invalid-test-key-not-a-secret-123456"))
+        self.assertEqual(result["step_id"], "oauth_remote")
+        self.assertEqual(result["errors"], {"oauth_worker_api_key": "worker_key_rejected"})
+        self.assertEqual(result["data_schema"]["email"], "tester@example.invalid")
+        self.assertEqual(result["data_schema"]["prefill"], ENDPOINT)
+        self.assertNotIn("password", result["data_schema"])
+        self.assertNotIn("oauth_worker_api_key", result["data_schema"])
+        self.assertEqual(flow.stellantis.saved, [])
+
+    async def test_worker_http_401_stays_on_form_for_reconfigure(self):
+        flow = self.new_flow()
+        flow.source = "reconfigure"
+        async def refused(*args, **kwargs):
+            raise module.WorkerOAuthKeyRejected("Worker API key rejected (HTTP 401)")
+        flow.stellantis.get_oauth_code = refused
+        result = await flow.async_step_oauth_remote(self.user_input(
+            ENDPOINT, override_key="invalid-test-key-not-a-secret-123456"))
+        self.assertEqual(result["step_id"], "oauth_remote")
+        self.assertEqual(result["errors"], {"oauth_worker_api_key": "worker_key_rejected"})
+
+    def test_key_rejected_has_dutch_and_english_translations(self):
+        import json
+        for locale in ("nl", "en"):
+            path = ROOT / "custom_components" / "stellantis_vehicles" / "translations" / (locale + ".json")
+            data = json.loads(path.read_text(encoding="utf-8"))
+            self.assertIn("worker_key_rejected", data["config"]["error"])
 
 
 if __name__ == "__main__":

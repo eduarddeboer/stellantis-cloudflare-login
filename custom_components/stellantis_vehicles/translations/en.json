@@ -65,6 +65,7 @@
       "get_oauth_code": "Get oauth code error",
       "invalid_worker_url": "Enter your own HTTPS NAME.ACCOUNT.workers.dev URL",
       "worker_key_required": "Enter your Cloudflare Worker API key.",
+      "worker_key_rejected": "Your Cloudflare Worker rejected the API key (HTTP 401). Check the key and the API_KEY secret in your own Worker.",
       "worker_owner_confirmation_required": "Confirm that this Cloudflare Worker belongs to you.",
       "get_access_token": "Get access token error",
       "get_user_info": "Get user info error",

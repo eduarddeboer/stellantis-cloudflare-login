@@ -65,6 +65,7 @@
       "get_oauth_code": "Foutmelding bij het verkrijgen van een OAuth-code",
       "invalid_worker_url": "Vul je eigen HTTPS NAME.ACCOUNT.workers.dev URL in",
       "worker_key_required": "Vul je Cloudflare Worker API-sleutel in.",
+      "worker_key_rejected": "Je Cloudflare Worker weigert de API-sleutel (HTTP 401). Controleer de sleutel en het API_KEY-secret in je eigen Worker.",
       "worker_owner_confirmation_required": "Bevestig dat deze Cloudflare Worker van jou is.",
       "get_access_token": "Foutmelding bij het verkrijgen van een access token",
       "get_user_info": "Foutmelding bij het verkrijgen van gebruikersinformatie",
