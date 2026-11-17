@@ -18,10 +18,11 @@
         }
       },
       "oauth_remote": {
-        "description": "Deze [externe service]({oauth_remote_link}) wordt gebruikt om een browser login te simuleren op de officiële website",
+        "description": "Gebruik uitsluitend je eigen Cloudflare Worker om aan te melden. Je inloggegevens worden naar jouw Worker gestuurd. Je kunt ook kiezen voor handmatig aanmelden.",
         "data": {
           "email": "Email",
           "password": "Wachtwoord",
+          "oauth_code_url": "URL van je eigen Cloudflare Worker",
           "oauth_worker_api_key": "Cloudflare Worker API-sleutel (uitsluitend jouw eigen Worker)",
           "oauth_worker_trust_confirm": "Ik bevestig dat dit mijn eigen Cloudflare Worker is (mijn inloggegevens worden hierheen verstuurd)"
         }
@@ -62,6 +63,7 @@
     },
     "error": {
       "get_oauth_code": "Foutmelding bij het verkrijgen van een OAuth-code",
+      "invalid_worker_url": "Vul je eigen HTTPS NAME.ACCOUNT.workers.dev URL in",
       "get_access_token": "Foutmelding bij het verkrijgen van een access token",
       "get_user_info": "Foutmelding bij het verkrijgen van gebruikersinformatie",
       "missing_user_info": "Foutmelding door ontbrekende gebruikersinformatie",

@@ -18,10 +18,11 @@
         }
       },
       "oauth_remote": {
-        "description": "Dieser [Remote-Dienst]({oauth_remote_link}) wird verwendet, um die Browser-Anmeldung auf der offiziellen Website zu simulieren",
+        "description": "Verwende ausschließlich deinen eigenen Cloudflare Worker für die Browser-Anmeldung. Deine Zugangsdaten werden an deinen Worker gesendet. Alternativ kannst du die manuelle OAuth-Anmeldung wählen.",
         "data": {
           "email": "E-Mail",
-          "password": "Passwort"
+          "password": "Passwort",
+          "oauth_code_url": "URL deines Cloudflare Workers"
         }
       },
       "oauth_manual": {

@@ -18,11 +18,11 @@
         }
       },
       "oauth_remote": {
-        "description": "Este [servicio remoto]({oauth_remote_link}) se utiliza para simular el inicio de sesión del navegador en el sitio web oficial. Puedes usar el servicio alojado por defecto o apuntar a tu propio servicio. Si eliges utilizar tu propio servicio, asegúrate de que la URL del servicio de inicio de sesión sea pública y accesible. El servicio remoto no almacena tus credenciales.",
+        "description": "Utiliza únicamente tu propio Cloudflare Worker para iniciar sesión. Tus credenciales se envían a tu Worker. También puedes elegir el inicio de sesión OAuth manual.",
         "data": {
           "email": "Correo electrónico",
           "password": "Contraseña",
-          "oauth_code_url": "URL del servicio de inicio de sesión"
+          "oauth_code_url": "URL de tu propio Cloudflare Worker"
         }
       },
       "oauth_manual": {

@@ -18,11 +18,11 @@
         }
       },
       "oauth_remote": {
-        "description": "Ta [oddaljena storitev]({oauth_remote_link}) se uporablja za simulacijo prijave v brskalniku na uradni strani. Uporabite lahko privzeto gostovano storitev ali pa jo usmerite na lastno postavitev",
+        "description": "Za prijavo uporabite samo svoj Cloudflare Worker. Vaši prijavni podatki se pošljejo vašemu Workerju. Izberete lahko tudi ročno prijavo OAuth.",
         "data": {
           "email": "E-pošta",
           "password": "Geslo",
-          "oauth_code_url": "URL storitve za prijavo"
+          "oauth_code_url": "URL vašega Cloudflare Workerja"
         }
       },
       "oauth_manual": {

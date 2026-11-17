@@ -18,11 +18,11 @@
         }
       },
       "oauth_remote": {
-        "description": "This [remote service]({oauth_remote_link}) is used to simulate browser login on the official website. You can use the default hosted service or point to your own self-hosted deployment",
+        "description": "Use only your own Cloudflare Worker for browser login. Your login details are sent to your Worker. Alternatively, select manual OAuth login.",
         "data": {
           "email": "Email",
           "password": "Password",
-          "oauth_code_url": "Login service URL",
+          "oauth_code_url": "Your Cloudflare Worker URL",
           "oauth_worker_api_key": "Cloudflare Worker API key (only your own Worker)",
           "oauth_worker_trust_confirm": "I confirm this Worker belongs to my Cloudflare account (login credentials are sent there)"
         }
@@ -63,6 +63,7 @@
     },
     "error": {
       "get_oauth_code": "Get oauth code error",
+      "invalid_worker_url": "Enter your own HTTPS NAME.ACCOUNT.workers.dev URL",
       "get_access_token": "Get access token error",
       "get_user_info": "Get user info error",
       "missing_user_info": "Missing user info error",

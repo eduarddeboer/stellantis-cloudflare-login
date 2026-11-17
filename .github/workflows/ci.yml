@@ -37,6 +37,10 @@ jobs:
           python-version: '3.13'
       - name: Compile Home Assistant integration
         run: python3 -m compileall -q custom_components/stellantis_vehicles
+      - name: Test existing OAuth client and HACS release archive
+        run: python3 -m unittest discover -s tests -v
+      - name: Build and validate local HACS ZIP without publishing
+        run: python3 scripts/build_release_zip.py
       - name: Validate component and Marketplace metadata
         run: |
           python3 - <<'PY'

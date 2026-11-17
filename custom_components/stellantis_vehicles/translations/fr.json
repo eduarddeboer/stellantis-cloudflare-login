@@ -18,11 +18,11 @@
         }
       },
       "oauth_remote": {
-        "description": "Ce [remote service]({oauth_remote_link}) est utilisé pour simuler une connexion sur le site officiel STELLANTIS. Vous pouvez utiliser ce service hébergé par défaut ou pointer vers votre propre service auto-hébergé.",
+        "description": "Utilisez uniquement votre propre Cloudflare Worker pour vous connecter. Vos identifiants sont envoyés à votre Worker. Vous pouvez aussi choisir la connexion OAuth manuelle.",
         "data": {
           "email": "Email",
           "password": "Mot de passe",
-          "oauth_code_url": "URL de votre service hébergé"
+          "oauth_code_url": "URL de votre Cloudflare Worker"
         }
       },
       "oauth_manual": {

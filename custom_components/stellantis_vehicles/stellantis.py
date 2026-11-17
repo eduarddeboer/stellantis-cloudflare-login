@@ -29,7 +29,7 @@ from homeassistant.util.ssl import client_context
 
 from .base import StellantisVehicleCoordinator
 from .worker_oauth_client import (WorkerOAuthError, normalized_worker_url,
-                                  is_workers_dev_url, get_code_from_worker)
+                                  get_code_from_worker)
 from .otp.otp import Otp, save_otp, load_otp, ConfigException
 from .utils import ( get_datetime, rate_limit, SENSITIVE_DATA_FILTER, replace_string_placeholders, log_call, resolve_mqtt_resp_data_error )
 from .exceptions import ( CommunicationError, RateLimitException )
@@ -45,7 +45,6 @@ from .const import (
     MOBILE_APPS,
     OAUTH_AUTHORIZE_URL,
     OAUTH_TOKEN_URL,
-    OAUTH_CODE_URL,
     OAUTH_AUTHORIZE_QUERY_PARAMS,
     OAUTH_GET_TOKEN_QUERY_PARAMS,
     OAUTH_REFRESH_TOKEN_QUERY_PARAMS,
@@ -419,7 +418,7 @@ class StellantisOauth(StellantisBase):
         self.logger_filter.add_custom_value(password)
         if worker_api_key:
             self.logger_filter.add_custom_value(worker_api_key)
-        selected_url = code_url or OAUTH_CODE_URL
+        selected_url = code_url or ""
         worker_endpoint = normalized_worker_url(selected_url)
         if worker_endpoint is not None:
             if not worker_api_key or not worker_trust_confirm:
@@ -432,15 +431,9 @@ class StellantisOauth(StellantisBase):
             )
             self.logger_filter.add_custom_value(code)
             return {"code": code}
-        if is_workers_dev_url(selected_url):
-            raise WorkerOAuthError("Invalid Cloudflare Workers URL")
-        if worker_api_key or selected_url != OAUTH_CODE_URL:
-            raise WorkerOAuthError("Only default service or own Workers URL supported")
-        oauth_code_request = await self.make_http_request(selected_url, 'POST', None, None, {"url": self.get_oauth_url(), "email": email, "password": password}, None, 300)
-        if "code" in oauth_code_request:
-            self.logger_filter.add_custom_value(oauth_code_request["code"])
-        _LOGGER.debug("OAuth code response: %s", oauth_code_request)
-        return oauth_code_request
+        # Fail closed: the fork never transmits credentials to the old shared
+        # hosted login service. Users can choose manual OAuth instead.
+        raise WorkerOAuthError("Use your own HTTPS Worker URL or manual OAuth login")
 
     @log_call
     async def get_access_token(self):

@@ -18,10 +18,11 @@
         }
       },
       "oauth_remote": {
-        "description": "Den här tjänsten [remote service]({oauth_remote_link}) simulerar en webbläsarinloggning mot den officiella webbplatsen",
+        "description": "Använd endast din egen Cloudflare Worker för inloggning. Dina inloggningsuppgifter skickas till din Worker. Du kan också välja manuell OAuth-inloggning.",
         "data": {
           "email": "E-post",
-          "password": "Lösenord"
+          "password": "Lösenord",
+          "oauth_code_url": "URL till din egen Cloudflare Worker"
         }
       },
       "oauth_manual": {

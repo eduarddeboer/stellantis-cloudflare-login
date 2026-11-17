@@ -38,10 +38,10 @@
       "oauth_remote": {
         "data": {
           "email": "Adres e-mail",
-          "oauth_code_url": "Adres URL usługi logowania",
+          "oauth_code_url": "Adres URL własnego Cloudflare Workera",
           "password": "Hasło"
         },
-        "description": "Ta [zdalna usługa]({oauth_remote_link}) służy do symulowania logowania w przeglądarce na oficjalnej stronie internetowej. Możesz użyć domyślnej usługi hostowanej lub wskazać własne wdrożenie hostowane lokalnie"
+        "description": "Do logowania używaj wyłącznie własnego Cloudflare Workera. Dane logowania są wysyłane do Twojego Workera. Możesz też wybrać ręczne logowanie OAuth."
       },
       "options": {
         "data": {

@@ -33,7 +33,6 @@ from .const import (
     FIELD_MQTT_LIVE_UPDATES,
     FIELD_RECONFIGURE,
     MQTT_REFRESH_TOKEN_TTL,
-    OAUTH_CODE_URL,
     TRANSLATION_PLACEHOLDERS
 )
 
@@ -57,10 +56,14 @@ OAUTH_MANUAL_SCHEMA = vol.Schema({
 })
 
 def OAUTH_REMOTE_SCHEMA(default_oauth_code_url=None):
+    # Require an owned Worker URL. Reauth may prefill only a previously saved URL.
+    worker_url = (vol.Required(FIELD_OAUTH_CODE_URL, default=default_oauth_code_url)
+                  if default_oauth_code_url else vol.Required(FIELD_OAUTH_CODE_URL))
     return vol.Schema({
         vol.Required(CONF_EMAIL): str,
         vol.Required(CONF_PASSWORD): str,
-        vol.Optional(FIELD_OAUTH_CODE_URL, default=default_oauth_code_url or OAUTH_CODE_URL): str,
+        worker_url: str,
+        # Keep optional for reauth: an unchanged URL may reuse its saved key.
         vol.Optional(FIELD_OAUTH_WORKER_API_KEY): selector({"text": {"type": "password", "autocomplete": "off"}}),
         vol.Optional(FIELD_OAUTH_WORKER_TRUST, default=False): bool
     })
@@ -163,9 +166,17 @@ class StellantisVehiclesConfigFlow(ConfigFlow, domain=DOMAIN):
             return self.async_show_form(step_id="oauth_remote", data_schema=OAUTH_REMOTE_SCHEMA(self.data.get(FIELD_OAUTH_CODE_URL)), description_placeholders=TRANSLATION_PLACEHOLDERS)
 
         try:
-            selected_url = user_input.get(FIELD_OAUTH_CODE_URL, OAUTH_CODE_URL)
+            selected_url = user_input.get(FIELD_OAUTH_CODE_URL, "")
             old_url = self.data.get(FIELD_OAUTH_CODE_URL)
             worker_url = normalized_worker_url(selected_url)
+            if worker_url is None:
+                # Never submit credentials or silently fall back to another service.
+                return self.async_show_form(
+                    step_id="oauth_remote",
+                    data_schema=OAUTH_REMOTE_SCHEMA(old_url),
+                    errors={FIELD_OAUTH_CODE_URL: "invalid_worker_url"},
+                    description_placeholders=TRANSLATION_PLACEHOLDERS,
+                )
             old_key = (self.data.get(FIELD_OAUTH_WORKER_API_KEY)
                        if selected_url == old_url else None)
             worker_key = user_input.get(FIELD_OAUTH_WORKER_API_KEY) or old_key
@@ -182,11 +193,8 @@ class StellantisVehiclesConfigFlow(ConfigFlow, domain=DOMAIN):
             await self.stellantis.hass_notify("get_oauth_code")
             return await self.async_step_oauth_mode()
 
-        self.data[FIELD_OAUTH_CODE_URL] = worker_url or selected_url
-        if worker_url:
-            self.data[FIELD_OAUTH_WORKER_API_KEY] = worker_key
-        else:
-            self.data.pop(FIELD_OAUTH_WORKER_API_KEY, None)
+        self.data[FIELD_OAUTH_CODE_URL] = worker_url
+        self.data[FIELD_OAUTH_WORKER_API_KEY] = worker_key
         self.stellantis.save_config({"oauth_code": code_request["code"]})
         return await self.async_step_get_access_token()
 
