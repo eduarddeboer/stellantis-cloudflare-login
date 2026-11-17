@@ -69,7 +69,7 @@ test("login gate is the only rate decision, after auth and URL checks and before
   const code = readFileSync(new URL("../src/index.ts", import.meta.url), "utf8");
   const auth = code.indexOf("const deniedStatus = accessStatus(");
   const body = code.indexOf('if (!body || typeof body.url !== "string"');
-  const allowedTarget = code.indexOf("allowedLoginUrl(target.href,");
+  const allowedTarget = code.indexOf("allowedAuthorizeUrl(target.href,");
   const gate = code.indexOf("const loginGate = await loginRateLimitStatus(env.LOGIN_RATE_LIMITER);");
   const launchBrowser = code.indexOf("browser = await launch(env.BROWSER);");
   assert.ok(auth >= 0 && body > auth && allowedTarget > body && gate > allowedTarget && launchBrowser > gate);
@@ -78,6 +78,26 @@ test("login gate is the only rate decision, after auth and URL checks and before
   assert.ok(code.includes('if (pathname === "/validate")'));
   assert.ok(code.includes('if (pathname === "/login-page-check")'));
   assert.ok(code.includes("if (loginGate !== null)"));
+});
+
+
+test("both diagnostics and login share strict authorize URL policy", () => {
+  const code = readFileSync(new URL("../src/index.ts", import.meta.url), "utf8");
+  assert.equal(code.includes("function publicAuthorizeUrl"), false);
+  assert.ok(code.includes("!allowedAuthorizeUrl(body.url, env.ALLOWED_LOGIN_HOSTS"));
+  assert.ok(code.includes("!allowedAuthorizeUrl(target.href, env.ALLOWED_LOGIN_HOSTS"));
+});
+
+test("credential fills require trusted main-frame host after redirects", () => {
+  const code = readFileSync(new URL("../src/index.ts", import.meta.url), "utf8");
+  const start = code.indexOf('stage = "login_navigation";', code.indexOf("const loginGate ="));
+  const email = code.indexOf("await emailField.fill(body.email", start);
+  const password = code.indexOf("await passwordField.fill(body.password", email);
+  const guard = "allowedLoginUrl(page.url(), env.ALLOWED_LOGIN_HOSTS";
+  assert.ok(start > 0 && email > start && password > email);
+  assert.equal(code.slice(start, email).split(guard).length - 1, 2);
+  assert.equal(code.slice(email, password).split(guard).length - 1, 1);
+  assert.ok(code.slice(start, password).includes("Login navigation left trusted provider host"));
 });
 
 test("Wrangler binds isolated login quotas for default and staging", () => {
