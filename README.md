@@ -141,10 +141,16 @@ cause (especially for the default Python urllib User-Agent).
 
 **Next evidence:** read-only `npx wrangler deployments list --env staging`
 and an unauthenticated `GET /health` of the verified deployment hostname.
+The local diagnostic was corrected to label non-200 host checks
+`result=unverified`, with regressions for both 403 and the normal
+200 → public-page sequence. **This improvement is awaiting Mac tests.**
 Do not repeat the authenticated `/validate` request until the intended
-deployment/hostname is established. Do not rotate or reveal an API key,
+deployment/hostname is established. Do not reveal an API key,
 lower access controls, deploy the Worker, or enter Peugeot credentials
-merely to overcome this unresolved 403. See `worker/README.md`.
+merely to overcome this unresolved 403. If the previously contacted
+hostname turns out not to be your own trusted Worker, rotate the Worker
+API key through Cloudflare before any further authenticated request.
+See `worker/README.md`.
 
 ## HACS prerelease requirements
 
