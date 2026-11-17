@@ -72,9 +72,11 @@ def main() -> None:
     print(f"VALID: {args.out} ({count} integration files, {size} bytes); not published")
     # Keep a traceable digest of the exact bytes intended as the release asset.
     # Verify a future GitHub download against this digest before approving it.
+    digest = hashlib.sha256()
     with args.out.open("rb") as archive:
-        digest = hashlib.file_digest(archive, "sha256").hexdigest()
-    print(f"SHA256: {digest}")
+        for block in iter(lambda: archive.read(1024 * 1024), b""):
+            digest.update(block)
+    print(f"SHA256: {digest.hexdigest()}")
 
 
 if __name__ == "__main__":
