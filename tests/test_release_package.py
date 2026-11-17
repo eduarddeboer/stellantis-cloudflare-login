@@ -150,5 +150,35 @@ class ReleasePackageTests(unittest.TestCase):
                 module.verify_release_source("a" * 40)
 
 
+    def test_release_cli_rejects_mismatched_expected_commit_without_zip(self):
+        with tempfile.TemporaryDirectory() as td:
+            version = json.loads(
+                (ROOT / "custom_components" / "stellantis_vehicles" / "manifest.json").read_text(encoding="utf-8")
+            )["version"]
+            dest = Path(td) / "stellantis_vehicles.zip"
+            result = subprocess.run(
+                [
+                    sys.executable, str(BUILDER), "--out", str(dest),
+                    "--release-tag", version, "--expected-commit", "0" * 40,
+                ],
+                cwd=ROOT, capture_output=True, text=True,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("HEAD does not match", result.stderr)
+            self.assertFalse(dest.exists())
+
+    def test_release_cli_requires_tag_when_expected_commit_is_supplied(self):
+        with tempfile.TemporaryDirectory() as td:
+            dest = Path(td) / "stellantis_vehicles.zip"
+            result = subprocess.run(
+                [sys.executable, str(BUILDER), "--out", str(dest),
+                 "--expected-commit", "0" * 40],
+                cwd=ROOT, capture_output=True, text=True,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("--expected-commit requires --release-tag", result.stderr)
+            self.assertFalse(dest.exists())
+
+
 if __name__ == "__main__":
     unittest.main()
