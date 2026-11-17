@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import importlib.util
 import io
+from contextlib import redirect_stdout
 import json
 from pathlib import Path
 from types import SimpleNamespace
@@ -161,6 +162,49 @@ class StagingReadOnlyTests(unittest.TestCase):
         self.assertIn("main_email_visible: True", result)
         self.assertNotIn("SECRET", result)
         self.assertNotIn("not-allowed.example", result)
+
+
+    def test_http_403_is_unverified_not_host_rejected(self):
+        output = io.StringIO()
+        with (
+            patch("builtins.input", return_value="https://own.account.workers.dev/"),
+            patch.object(module, "normalized_worker_url", return_value="https://own.account.workers.dev/"),
+            patch.object(module.getpass, "getpass", return_value="not-a-real-secret-of-sufficient-length"),
+            patch.object(module, "public_authorize_url", return_value="https://example.invalid/authorize"),
+            patch.object(module, "inspect", return_value=(403, {"allowed": False})) as inspect_call,
+            redirect_stdout(output),
+        ):
+            code = module.main()
+        self.assertEqual(code, 1)
+        self.assertIn("Host allowlist: HTTP 403; result=unverified", output.getvalue())
+        self.assertNotIn("allowed=False", output.getvalue())
+        inspect_call.assert_called_once()
+        self.assertEqual(inspect_call.call_args.args[2], "/validate")
+        self.assertNotIn("not-a-real-secret-of-sufficient-length", output.getvalue())
+
+    def test_successful_host_check_can_continue_to_safe_public_page_status(self):
+        output = io.StringIO()
+        responses = [
+            (200, {"allowed": True}),
+            (502, {"stage": "login_email_field", "reason": "timeout"}),
+        ]
+        with (
+            patch("builtins.input", return_value="https://own.account.workers.dev/"),
+            patch.object(module, "normalized_worker_url", return_value="https://own.account.workers.dev/"),
+            patch.object(module.getpass, "getpass", return_value="not-a-real-secret-of-sufficient-length"),
+            patch.object(module, "public_authorize_url", return_value="https://example.invalid/authorize"),
+            patch.object(module, "inspect", side_effect=responses) as inspect_call,
+            redirect_stdout(output),
+        ):
+            code = module.main()
+        self.assertEqual(code, 0)
+        self.assertEqual(
+            [call.args[2] for call in inspect_call.call_args_list],
+            ["/validate", "/login-page-check"],
+        )
+        self.assertIn("Host allowlist: HTTP 200; allowed=True", output.getvalue())
+        self.assertIn("Public login page: HTTP 502", output.getvalue())
+        self.assertNotIn("not-a-real-secret-of-sufficient-length", output.getvalue())
 
 
 if __name__ == "__main__":
