@@ -1,5 +1,5 @@
 import { launch } from "@cloudflare/playwright";
-import { extractAuthorizationCode, allowedLoginUrl } from "./oauth";
+import { extractAuthorizationCode, allowedLoginUrl, allowedAuthorizeUrl } from "./oauth";
 import { accessStatus, loginRateLimitStatus } from "./security";
 import {
   EMAIL_SELECTORS, PASSWORD_SELECTORS, LOGIN_BUTTON_SELECTORS,
@@ -43,25 +43,6 @@ function boundedTimeout(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value)
     ? Math.max(1000, Math.min(60000, value))
     : 50000;
-}
-
-/** The inspect-only endpoint accepts a public OAuth authorize URL, never tokens. */
-function publicAuthorizeUrl(raw: string, allowedHosts: string): boolean {
-  if (!allowedLoginUrl(raw, allowedHosts)) return false;
-  try {
-    const url = new URL(raw);
-    if (url.pathname !== "/am/oauth2/authorize" ||
-        url.searchParams.get("response_type") !== "code" ||
-        !url.searchParams.get("client_id") ||
-        !url.searchParams.get("redirect_uri")) return false;
-    const allowedParams = new Set(["client_id", "response_type", "redirect_uri", "scope", "locale"]);
-    let unexpectedParam = false;
-    url.searchParams.forEach((_value, key) => { if (!allowedParams.has(key)) unexpectedParam = true; });
-    if (unexpectedParam) return false;
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 /** Code may arrive immediately after login, without a consent page. */
@@ -140,7 +121,7 @@ export default {
     if (pathname === "/login-page-check") {
       if (!body || typeof body !== "object" || Array.isArray(body) ||
           Object.keys(body).length !== 1 || typeof body.url !== "string" ||
-          body.url.length > 8192 || !publicAuthorizeUrl(body.url, env.ALLOWED_LOGIN_HOSTS || "")) {
+          body.url.length > 8192 || !allowedAuthorizeUrl(body.url, env.ALLOWED_LOGIN_HOSTS || "")) {
         return failure("Expected public OAuth URL only", 400);
       }
       let checkBrowser: Awaited<ReturnType<typeof launch>> | undefined;
@@ -282,8 +263,8 @@ export default {
     let target: URL;
     try {
       target = new URL(body.url);
-      if (!allowedLoginUrl(target.href, env.ALLOWED_LOGIN_HOSTS || "")) {
-        return failure("Login host not allowed", 400);
+      if (!allowedAuthorizeUrl(target.href, env.ALLOWED_LOGIN_HOSTS || "")) {
+        return failure("OAuth authorize URL not allowed", 400);
       }
     } catch {
       return failure("Invalid login URL", 400);
@@ -317,11 +298,23 @@ export default {
         page.on("requestfailed", req => observe(req.url()));
         stage = "login_navigation";
         await page.goto(target.href, { waitUntil: "domcontentloaded", timeout: navigationTimeout });
+        // Followed redirects must never move the top-level login page off the
+        // independently configured exact provider host before receiving secrets.
+        // The URL is not printed in errors or diagnostic responses.
+        if (!allowedLoginUrl(page.url(), env.ALLOWED_LOGIN_HOSTS || "")) {
+          throw new Error("Login navigation left trusted provider host");
+        }
         stage = "login_email_field";
         const emailField = await firstVisible(s => page.locator(s).first(), EMAIL_SELECTORS, selectorTimeout);
+        if (!allowedLoginUrl(page.url(), env.ALLOWED_LOGIN_HOSTS || "")) {
+          throw new Error("Login navigation left trusted provider host");
+        }
         await emailField.fill(body.email, { timeout: selectorTimeout });
         stage = "login_password_field";
         const passwordField = await firstVisible(s => page.locator(s).first(), PASSWORD_SELECTORS, selectorTimeout);
+        if (!allowedLoginUrl(page.url(), env.ALLOWED_LOGIN_HOSTS || "")) {
+          throw new Error("Login navigation left trusted provider host");
+        }
         await passwordField.fill(body.password, { timeout: selectorTimeout });
         stage = "login_submit";
         const loginButton = await firstVisible(s => page.locator(s).first(), LOGIN_BUTTON_SELECTORS, selectorTimeout);
