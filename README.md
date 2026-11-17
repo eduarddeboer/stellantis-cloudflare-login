@@ -93,7 +93,14 @@ to `main` as a final safety net; PRs are not automatically run on GitHub.
 ## Next isolated acceptance: public login page only
 
 After the strict Worker OAuth URL policy passed its Mac offline tests on
-commit `beb6a18`, the next test is intentionally **credential-free**:
+commit `beb6a18`, the next test is intentionally **credential-free**.
+The first Mac run of the read-only diagnostic tests on commit `8f2fb00`
+found a **false-positive assertion**: the public OAuth `scope`
+legitimately contains the word `email`. The request body itself has
+only a `url` field, not an email or password field. The assertion is
+now structural, and redirected HTTP error responses are closed to avoid
+a Python 3.14 `ResourceWarning`. These source/test fixes still require
+a new local acceptance run:
 
 ```sh
 python3 scripts/check_staging_readonly.py
