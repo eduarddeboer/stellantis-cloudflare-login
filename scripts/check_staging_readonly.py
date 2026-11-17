@@ -14,7 +14,7 @@ import json
 from pathlib import Path
 import sys
 from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIGS = ROOT / "custom_components" / "stellantis_vehicles" / "configs.json"
@@ -81,6 +81,13 @@ def normalized_worker_url(raw: str) -> str | None:
     return module.normalized_worker_url(raw)
 
 
+class NoRedirect(HTTPRedirectHandler):
+    """Never forward a Worker API key to a redirected URL."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
 def inspect(endpoint: str, api_key: str, path: str, authorize_url: str) -> tuple[int, dict]:
     """Only the two approved read-only endpoints, with sanitized exceptions."""
     if path not in ("/validate", "/login-page-check"):
@@ -94,7 +101,7 @@ def inspect(endpoint: str, api_key: str, path: str, authorize_url: str) -> tuple
         },
     )
     try:
-        with urlopen(request, timeout=100) as response:
+        with build_opener(NoRedirect).open(request, timeout=100) as response:
             status, raw = response.status, response.read(16385)
     except HTTPError as error:
         status, raw = error.code, error.read(16385)
