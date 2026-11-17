@@ -1,6 +1,6 @@
 import { launch } from "@cloudflare/playwright";
 import { extractAuthorizationCode, allowedLoginUrl } from "./oauth";
-import { accessStatus } from "./security";
+import { accessStatus, loginRateLimitStatus } from "./security";
 import {
   EMAIL_SELECTORS, PASSWORD_SELECTORS, LOGIN_BUTTON_SELECTORS,
   CONSENT_BUTTON_SELECTORS, firstVisible,
@@ -13,6 +13,7 @@ interface Env {
   BROWSER: BrowserRun;
   API_KEY: string;
   ALLOWED_LOGIN_HOSTS: string;
+  LOGIN_RATE_LIMITER: RateLimit;
 }
 
 interface LoginRequest {
@@ -286,6 +287,13 @@ export default {
       }
     } catch {
       return failure("Invalid login URL", 400);
+    }
+
+    // Only authenticated, well-formed login attempts consume the quota.
+    // Missing/broken binding fails closed before launching a browser.
+    const loginGate = await loginRateLimitStatus(env.LOGIN_RATE_LIMITER);
+    if (loginGate !== null) {
+      return failure(loginGate === 429 ? "Too many login attempts" : "Login temporarily unavailable", loginGate);
     }
 
     let browser: Awaited<ReturnType<typeof launch>> | undefined;
