@@ -80,15 +80,29 @@ default Python urllib User-Agent *before* the Worker runs, while a
 descriptive application User-Agent is allowed. This is a strong
 hypothesis, not a confirmed root cause.
 
-**Next safe comparison (no API key or account credentials):** run the
-same unauthenticated `POST /validate` against each hostname with
-both User-Agent values. With this repository's Worker reached, missing
-Bearer authentication should return **HTTP 401**, before reading the JSON
-body. HTTP 403 with only the Python User-Agent points to a Cloudflare
-front-door block; status differences between hostnames identify a
-different deployment or access policy. Do not edit Worker runtime,
-rotate a key, disable protection, or redeploy based on a hostname's
-`GET /health` response alone.
+**Confirmed User-Agent comparison (17 November 2026):** four
+unauthenticated `POST /validate` requests, differing only in User-Agent,
+produced:
+
+| Staging host | `Python-urllib/3.14` | `stellantis-staging-check/1.0` |
+| --- | --- | --- |
+| `stellantis-cloudflare-login-staging` | HTTP 403 | HTTP 401 |
+| `stellantis-cloudflare-worker-staging` | HTTP 403 | HTTP 401 |
+
+An HTTP 401 without a Bearer key is the Worker's expected response.
+This demonstrates a User-Agent-dependent rejection in front of the
+Worker on both endpoints. **Which exact Cloudflare rule rejects urllib
+is not established**; there is no evidence here of a broken hostname
+allowlist. Both hostnames responding the same way does not establish
+that they run the same deployment.
+
+The canonical local `scripts/check_staging_readonly.py` now sends the
+already-tested descriptive `User-Agent: stellantis-staging-check/1.0`
+on both diagnostic requests. No access policy, Worker runtime,
+Bearer-secret handling, or allowed-host configuration was changed.
+The additional offline regression test and Mac acceptance are pending.
+Once local tests pass, use only the **confirmed, account-owned
+canonical** staging hostname for the read-only probe.
 
 ## Credential-free staging acceptance from your Mac
 
