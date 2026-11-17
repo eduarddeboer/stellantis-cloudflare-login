@@ -147,12 +147,19 @@ on 17 November 2026. Both the canonical
 to unauthenticated `GET /health` using a descriptive User-Agent.
 This **does not prove that both point to the same Worker, or what
 source commit was deployed**. The existing Worker does not emit
-HTTP 403 for `POST /validate`. According to Cloudflare's own workers.dev
-documentation, Python urllib's default User-Agent may be blocked
-before the Worker executes. This is now a **strong hypothesis**.
-The next check is an unauthenticated `POST /validate` on both hosts,
-comparing the Python and descriptive User-Agents, without an API key.
-Do not repeat the credential-bearing diagnostic yet.
+HTTP 403 for `POST /validate`. The unauthenticated `POST /validate`
+comparison isolated a **User-Agent-dependent rejection** on both hosts:
+`Python-urllib/3.14` returned HTTP 403 while
+`stellantis-staging-check/1.0` returned HTTP 401 (the expected
+unauthenticated Worker response) on each host. The specific Cloudflare
+protection rule was **not** independently identified. This is not an
+OAuth host-allowlist failure. The existing read-only Python diagnostic
+now sets that confirmed descriptive User-Agent in the outgoing request;
+it does not change Worker runtime code, security rules or Bearer
+authentication. The fix is **pending local regression acceptance**.
+After that, the next stage is to run the credential-free diagnostic
+against the verified own canonical staging Worker, not the older
+ambiguous hostname. No MyPeugeot credentials are needed.
 
 The local diagnostic was corrected to label non-200 host checks
 `result=unverified`, with regressions for both 403 and the normal
