@@ -10,6 +10,31 @@ Contributions are welcome. This experimental project handles account authenticat
 4. Run `bash scripts/check_local.sh` on your development machine and report the result in the PR. Pull requests do **not** start GitHub Actions automatically; CI remains a safety net for `main` and may be manually dispatched once available on the default branch. Do not run real-account logins, request access to others' accounts, deploy on PR, or change live Home Assistant systems.
 5. Security-relevant changes to trust checks, redirects, credentials, sessions, token handling or releases need explicit maintainer review and separate isolated acceptance.
 
+## Documentation is part of the change
+
+Keep the **existing canonical documentation** in sync with every relevant
+behavioral, configuration, security, setup, or release change. Update it in
+the **same PR**, rather than leaving documentation for a later release.
+Do not create parallel instructions if an existing owner document suffices.
+
+- `README.md`: product scope, current acceptance status, installation/rollback
+  warnings, and prerequisites for community/HACS releases.
+- `worker/README.md`: Cloudflare deployment, bindings, secrets, API behavior,
+  limits, and failure modes.
+- `CONTRIBUTING.md`: architecture ownership, developer workflow, and local checks.
+- `SECURITY.md`: trust boundaries, credential risks, sensitive logging,
+  and vulnerability reporting.
+- `custom_components/stellantis_vehicles/translations/`: user-visible flow
+  labels and error messages when changed, in supported locales.
+- `.github/PULL_REQUEST_TEMPLATE.md`: the mandatory change/acceptance checklist.
+
+Before marking a PR ready, confirm that code, tests, documentation, and
+recorded acceptance evidence describe **the same commit**. Distinguish
+offline simulation, staging observations, and live account acceptance.
+Record untested or blocked scenarios explicitly; never promote a green
+unit-test run into a claim of production readiness. Documentation-only
+corrections do not require rerunning unrelated runtime acceptance tests.
+
 ## Local-first acceptance checks
 
 From the repository root on your own Mac or Linux machine, run:
