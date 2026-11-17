@@ -58,3 +58,22 @@ jobs:
           assert (component / 'worker_oauth_client.py').is_file()
           print('Static metadata checked; release packaging still requires acceptance.')
           PY
+
+  # Official release/catalog validators are never scheduled for every commit.
+  # They are invoked explicitly at the release gate after source review.
+  official-hacs:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Official HACS/Marketplace repository validation
+        uses: hacs/action@main
+        with:
+          category: integration
+
+  official-hassfest:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Official Home Assistant hassfest validation
+        uses: home-assistant/actions/hassfest@master
