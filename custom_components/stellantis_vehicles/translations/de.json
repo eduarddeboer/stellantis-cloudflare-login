@@ -1,0 +1,455 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "data": {
+          "mobile_app": "Fahrzeug App"
+        }
+      },
+      "country": {
+        "data": {
+          "country_code": "Dein Ländercode"
+        }
+      },
+      "oauth_mode": {
+        "description": "Um Ihr Konto zu authentifizieren, wird ein Remote-Dienst verwendet, der Ihre Zugangsdaten in keiner Weise speichert. Alternativ können Sie die manuelle Methode verwenden",
+        "data": {
+          "oauth_manual_mode": "Die manuelle Methode verwenden"
+        }
+      },
+      "oauth_remote": {
+        "description": "Dieser [Remote-Dienst]({oauth_remote_link}) wird verwendet, um die Browser-Anmeldung auf der offiziellen Website zu simulieren",
+        "data": {
+          "email": "E-Mail",
+          "password": "Passwort"
+        }
+      },
+      "oauth_manual": {
+        "description": "Führen Sie diese Schritte im **Desktop-Browser** aus:\n\n1. Gehen Sie zur Anmeldeseite {oauth_link};\n2. Öffnen Sie den Browser **DevTools** (F12) und wechseln Sie zur Registerkarte **Netzwerk**;\n3. Melden Sie sich bei Ihrem Konto an und klicken Sie auf die letzte Schaltfläche „Bestätigen“;\n4. Suchen Sie in der Registerkarte **Netzwerk** die obige Anfrage und kopieren Sie die **{oauth_label}**;{oauth_devtools}",
+        "data": {
+          "oauth_code": "OAuth code"
+        }
+      },
+      "get_access_token": {
+        "description": "**Authentifizierung abgeschlossen**.\nUm Fernbefehle zu nutzen, aktivieren Sie die Option unten und schließen Sie den OTP-Schritt ab",
+        "data": {
+          "remote_commands": "Fernbefehle konfigurieren (E-Remote oder Connect Plus erforderlich)"
+        }
+      },
+      "otp": {
+        "data": {
+          "sms_code": "SMS-Code von Stellantis",
+          "pin_code": "Pin-Code aus der Fahrzeug App"
+        }
+      },
+      "options": {
+        "data": {
+          "notifications": "Persistente Benachrichtigungen aktivieren",
+          "anonymize_logs": "Persönliche Daten in Protokollen anonymisieren",
+          "mqtt_live_updates": "Fahrzeugstatus live per MQTT aktualisieren"
+        }
+      },
+      "reauth_confirm": {
+        "description": "Sie müssen sich erneut authentifizieren, um diese Integration zu verwenden"
+      },
+      "reconfigure": {
+        "data": {
+          "reconfigure": "Neu konfigurieren"
+        }
+      }
+    },
+    "error": {
+      "get_oauth_code": "Fehler beim Abrufen des OAuth-Codes",
+      "get_access_token": "Fehler beim Abrufen des Zugriffstokens",
+      "get_user_info": "Fehler beim Abrufen der Benutzerinformationen",
+      "missing_user_info": "Fehler: Fehlende Benutzerinformationen",
+      "get_otp_sms": "SMS-Fehler beim OTP-Code",
+      "get_mqtt_access_token": "Fehler beim Abrufen des MQTT-Zugriffstokens",
+      "get_mqtt_access_token_nok_access": "Ungültiger SMS-Code oder PIN-Code",
+      "get_mqtt_access_token_nok_maxnbtools": "Begrenzung der verbundenen Geräte/empfangenen SMS, setzen Sie Ihr Stellantis-Konto zurück und versuchen Sie es erneut",
+      "get_mqtt_access_token_nok_nok_blocked": "Grenze für falsche PIN-Eingaben erreicht, Konfigurationsvorgang neu starten",
+      "get_mqtt_access_token_rate_limit": "Ratenlimit für MQTT-Zugriffstoken-Anfragen überschritten (6 pro Tag)"
+    },
+    "abort": {
+      "already_configured": "Der Account ist bereits konfiguriert",
+      "reauth_successful": "Die erneute Authentifizierung war erfolgreich",
+      "reconfigure_successful": "Die Konfiguration war erfolgreich"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "service_battery_voltage": {
+        "name": "Service-Batterie"
+      },
+      "type": {
+        "name": "Typ",
+        "state": {
+          "electric": "Elektro",
+          "hybrid": "Hybrid",
+          "thermic": "Thermisch",
+          "hydrogen": "Wasserstoff"
+        }
+      },
+      "temperature": {
+        "name": "Temperatur"
+      },
+      "mileage": {
+        "name": "Kilometer",
+        "state_attributes": {
+          "last_updated": {
+            "name": "Zuletzt aktualisiert"
+          }
+        }
+      },
+      "speed": {
+        "name": "Geschwindigkeit"
+      },
+      "autonomy": {
+        "name": "Reichweite"
+      },
+      "mileage_before_maintenance": {
+        "name": "Kilometer bis zur nächsten Wartung"
+      },
+      "days_before_maintenance": {
+        "name": "Tage bis zur nächsten Wartung"
+      },
+      "battery": {
+        "name": "Batterie"
+      },
+      "battery_health_resistance": {
+        "name": "Batterie-SOH (Widerstand)"
+      },
+      "battery_health_capacity": {
+        "name": "Batterie-SOH (Kapazität)"
+      },
+      "battery_charging_rate": {
+        "name": "Batterie Laderate"
+      },
+      "battery_charging_type": {
+        "name": "Batterie Ladetyp",
+        "state": {
+          "no": "Kein Ladetyp",
+          "slow": "Langsam",
+          "quick": "Schnell"
+        }
+      },
+      "battery_charging_end": {
+        "name": "Batterie Ladezeit-Ende"
+      },
+      "battery_capacity": {
+        "name": "Batteriekapazität"
+      },
+      "battery_residual": {
+        "name": "Batterierestwert"
+      },
+      "command_status": {
+        "name": "Befehlsstatus",
+        "state": {
+          "not_compatible": "Nicht kompatibel",
+          "failed": "Fehlgeschlagen",
+          "doors_state_unlocked": "Alle Türen entriegelt",
+          "doors_state_locked": "Alle Türen verriegelt",
+          "doors_discarded_door_open": "Verworfen - Tür offen",
+          "doors_request_refused": "Abgelehnt - Tür offen oder Schlüssel im Fahrzeug",
+          "doors_unknown_reason": "Abgelehnt - unbekannter Grund",
+          "doors_cid_inside": "Abgelehnt - Schlüssel im Fahrzeug",
+          "warning_discarded_sev_not_stop": "Verworfen - Motor läuft",
+          "warning_wait_before_resend": "Bereits ausgeführt - kurz warten",
+          "precond_discarded_sev_not_stop": "Verworfen - Motor läuft",
+          "precond_discarded_already_ongoing": "Verworfen - läuft bereits",
+          "precond_discarded_communication_problem": "Verworfen - Kommunikationsproblem",
+          "precond_stop_discarded_sev_not_stop": "Stop verworfen - Motor läuft",
+          "precond_stop_discarded_not_ongoing": "Stop verworfen - läuft nicht",
+          "charging_discarded_standby": "Verworfen - Ladesystem im Standby",
+          "charging_discarded_already_ongoing": "Verworfen - lädt bereits",
+          "charging_discarded_communication_problem": "Verworfen - Kommunikationsproblem mit Ladesystem",
+          "charging_discarded_sev_not_stop": "Verworfen - Motor läuft",
+          "rate_limit": "Ratenlimit überschritten (6 pro 20 Minuten)",
+          "903": "Weitergeleitet",
+          "902": "Status wird geprüft",
+          "901": "Fahrzeug aufwecken",
+          "900": "Akzeptiert",
+          "507": "Kein GPS-Empfang",
+          "506": "Mobilfunkanbieter nicht unterstützt",
+          "502": "Doppelt",
+          "500": "Fehler",
+          "422": "Privacy aktiviert",
+          "300": "Zeitüberschreitung",
+          "0": "Abgeschlossen"
+        }
+      },
+      "fuel": {
+        "name": "Füllstand im Tank"
+      },
+      "fuel_autonomy": {
+        "name": "Mit dem Tank kommst du noch so weit"
+      },
+      "fuel_consumption_total": {
+        "name": "Kraftstoffverbrauch insgesamt"
+      },
+      "fuel_consumption_instant": {
+        "name": "Kraftstoffverbrauch momentan"
+      },
+      "coolant_temperature": {
+        "name": "Kühlmitteltemperatur"
+      },
+      "oil_temperature": {
+        "name": "Öltemperatur"
+      },
+      "air_temperature": {
+        "name": "Lufttemperatur"
+      },
+      "driving_behavior": {
+        "name": "Fahrverhalten"
+      },
+      "last_trip": {
+        "name": "Letzte Fahrt",
+        "state_attributes": {
+          "duration": {
+            "name": "Dauer"
+          },
+          "start_mileage": {
+            "name": "Kilometerstand beim Start"
+          },
+          "avg_speed": {
+            "name": "Durchschnittsgeschwindigkeit"
+          },
+          "max_speed": {
+            "name": "Maximale Geschwindigkeit"
+          },
+          "electric_consumption": {
+            "name": "Stromverbrauch"
+          },
+          "electric_avg_consumption": {
+            "name": "Durchschnittlicher Stromverbrauch"
+          },
+          "fuel_consumption": {
+            "name": "Kraftstoffverbrauch"
+          },
+          "fuel_avg_consumption": {
+            "name": "Durchschnittlicher Kraftstoffverbrauch"
+          }
+        }
+      },
+      "last_charge": {
+        "name": "Letzte Ladung",
+        "state_attributes": {
+          "in_progress": {
+            "name": "Wird geladen",
+            "state": {
+              "true": "Ja"
+            }
+          },
+          "mileage": {
+            "name": "Kilometer"
+          },
+          "initial_percentage": {
+            "name": "Anfänglicher Ladezustand"
+          },
+          "initial_energy": {
+            "name": "Anfängliche Energiemenge"
+          },
+          "initial_autonomy": {
+            "name": "Anfängliche Reichweite"
+          },
+          "final_time": {
+            "name": "Endzeit"
+          },
+          "final_percentage": {
+            "name": "Finaler Ladezustand"
+          },
+          "final_energy": {
+            "name": "Finaler Energieinhalt"
+          },
+          "final_autonomy": {
+            "name": "Finale Reichweite"
+          },
+          "duration": {
+            "name": "Dauer des Ladevorgangs"
+          },
+          "recharged_percent": {
+            "name": "Aufgeladene Energie in Prozent"
+          },
+          "recharged_energy": {
+            "name": "Aufgeladene Energiemenge"
+          },
+          "recharged_autonomy": {
+            "name": "Aufgeladene Reichweite"
+          },
+          "avg_power": {
+            "name": "Durchschnittliche Ladeleistung"
+          }
+        }
+      }
+    },
+    "binary_sensor": {
+      "moving": {
+        "name": "In Bewegung"
+      },
+      "doors": {
+        "name": "Türen"
+      },
+      "door_trunk": {
+        "name": "Kofferraum"
+      },
+      "door_driver": {
+        "name": "Fahrertür"
+      },
+      "door_passenger": {
+        "name": "Beifahrertür"
+      },
+      "door_rear_left": {
+        "name": "Hintere Tür links"
+      },
+      "door_rear_right": {
+        "name": "Hintere Tür rechts"
+      },
+      "belt_driver": {
+        "name": "Fahrer-Sicherheitsgurt"
+      },
+      "belt_passenger": {
+        "name": "Beifahrer-Sicherheitsgurt"
+      },
+      "battery_plugged": {
+        "name": "Ladekabel angeschlossen"
+      },
+      "battery_charging": {
+        "name": "Batterie lädt"
+      },
+      "engine": {
+        "name": "Motor"
+      },
+      "preconditioning": {
+        "name": "Vorklimatisierung"
+      },
+      "alarm": {
+        "name": "Alarm"
+      },
+      "privacy": {
+        "name": "Privatsphäre"
+      },
+      "remote_commands": {
+        "name": "Fahrzeug aus der Entfernung bedienen"
+      },
+      "command_pending": {
+        "name": "Befehl ausstehend"
+      },
+      "daylight": {
+        "name": "Tagesfahrlicht"
+      }
+    },
+    "button": {
+      "wakeup": {
+        "name": "Aufwecken"
+      },
+      "doors_lock": {
+        "name": "Türen verriegeln"
+      },
+      "doors_unlock": {
+        "name": "Türen entriegeln"
+      },
+      "horn": {
+        "name": "Hupe"
+      },
+      "lights": {
+        "name": "Standlicht"
+      },
+      "charge_start": {
+        "name": "Fahrzeug laden starten"
+      },
+      "charge_stop": {
+        "name": "Fahrzeug laden stoppen"
+      },
+      "preconditioning_start": {
+        "name": "Vorklimatisierung starten"
+      },
+      "preconditioning_stop": {
+        "name": "Vorklimatisierung stoppen"
+      }
+    },
+    "device_tracker": {
+      "vehicle": {
+        "name": "Fahrzeug",
+        "state_attributes": {
+          "altitude": {
+            "name": "Höhe"
+          },
+          "fix_status": {
+            "name": "Fix-Status"
+          },
+          "signal_quality": {
+            "name": "Signalqualität"
+          },
+          "position_updated_at": {
+            "name": "Aktualisiert am"
+          },
+          "entity_picture": {
+            "name": "Entitätsbild"
+          }
+        }
+      }
+    },
+    "number": {
+      "battery_charging_limit": {
+        "name": "Batterieladelimit"
+      },
+      "refresh_interval": {
+        "name": "Aktualisierungsintervall"
+      }
+    },
+    "switch": {
+      "battery_charging_limit": {
+        "name": "Batterieladelimit"
+      },
+      "abrp_sync": {
+        "name": "ABRP Sync"
+      },
+      "battery_values_correction": {
+        "name": "Korrektur der Batteriewerte"
+      }
+    },
+    "text": {
+      "abrp_token": {
+        "name": "ABRP Token"
+      }
+    },
+    "time": {
+      "battery_charging_start": {
+        "name": "Start des Batterieladevorgangs"
+      }
+    }
+  },
+  "exceptions": {
+    "command_already_pending": {
+      "message": "\"{name}\" kann nicht gesendet werden: \"{pending_name}\" wartet noch auf eine Antwort vom Fahrzeug."
+    },
+    "command_not_sent": {
+      "message": "\"{name}\" kann nicht an das Fahrzeug gesendet werden. Details stehen im Log."
+    }
+  },
+  "common": {
+    "access_token_error_title": "Zugriffstoken-Fehler",
+    "access_token_error_message": "Lesen Sie die offizielle Dokumentation im [OAuth2 Code]({oauth_token_doc_link}) Abschnitt",
+    "otp_error_title": "OTP Fehler",
+    "otp_error_message": "Lesen Sie die offizielle Dokumentation im [OTP error - NOK:MAXNBTOOLS]({otp_nokmaxnbtools_doc_link}) Abschnitt",
+    "no_vehicles_found_title": "Nicht verfügbar",
+    "no_vehicles_found_message": "Für dieses Konto wurden keine Fahrzeuge gefunden",
+    "command_error_title": "Befehl",
+    "command_error_message": "Der Befehl wurde nicht korrekt gesendet."
+  },
+  "issues": {
+    "vehicle_removed": {
+      "title": "Das Fahrzeug {vin} wurde aus Ihrem Konto entfernt",
+      "description": "Home Assistant kann das Fahrzeug `{vin}` nicht mehr über die Stellantis-API erreichen, und es ist nicht mehr in Ihrem Stellantis-Konto aufgeführt. Das bedeutet in der Regel, dass das Fahrzeug verkauft oder getrennt wurde. Um dieses Problem zu beheben, muss das Fahrzeug aus der Integration entfernt werden.\n\n**Warnung:** Beim Entfernen des Fahrzeugs werden auch **alle zugehörigen Entitäten** und damit **alle Kurz- und Langzeitstatistiken** dieses Fahrzeugs (z. B. Energie, Kilometerstand und Batterieverlauf) dauerhaft gelöscht. Diese Daten lassen sich nicht wiederherstellen. Wenn Sie sie behalten möchten, exportieren oder sichern Sie sie, bevor Sie fortfahren.\n\nSo entfernen Sie das Fahrzeug:\n1. Öffnen Sie **Einstellungen > Geräte & Dienste > Stellantis Vehicles**.\n2. Öffnen Sie das Fahrzeugmenü (drei senkrechte Punkte ganz rechts in der Zeile des Fahrzeugs) und wählen Sie **Gerät löschen**.\n3. Starten Sie Home Assistant neu.\n\nDiese Warnung verschwindet, sobald das Fahrzeug entfernt wurde."
+    }
+  },
+  "selector": {
+    "reconfigure": {
+      "options": {
+        "oauth": "Konto erneut authentifizieren",
+        "remote_commands": "Fernbefehle konfigurieren (E-Remote oder Connect Plus erforderlich)",
+        "options": "Globale Einstellungen"
+      }
+    }
+  }
+}

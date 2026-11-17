@@ -1,0 +1,7 @@
+{
+  "name": "Stellantis Vehicles \u2013 Cloudflare Login (beta)",
+  "homeassistant": "2025.11.0",
+  "render_readme": true,
+  "zip_release": true,
+  "filename": "stellantis_vehicles.zip"
+}

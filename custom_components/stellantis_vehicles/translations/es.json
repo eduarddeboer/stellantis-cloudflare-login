@@ -1,0 +1,467 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "data": {
+          "mobile_app": "Aplicación móvil del vehículo"
+        }
+      },
+      "country": {
+        "data": {
+          "country_code": "Tu código de país"
+        }
+      },
+      "oauth_mode": {
+        "description": "Para autenticar tu cuenta, se utiliza un servicio remoto que no almacena tus credenciales de ninguna manera; alternativamente, puedes usar el método manual",
+        "data": {
+          "oauth_manual_mode": "Usar el método manual"
+        }
+      },
+      "oauth_remote": {
+        "description": "Este [servicio remoto]({oauth_remote_link}) se utiliza para simular el inicio de sesión del navegador en el sitio web oficial. Puedes usar el servicio alojado por defecto o apuntar a tu propio servicio. Si eliges utilizar tu propio servicio, asegúrate de que la URL del servicio de inicio de sesión sea pública y accesible. El servicio remoto no almacena tus credenciales.",
+        "data": {
+          "email": "Correo electrónico",
+          "password": "Contraseña",
+          "oauth_code_url": "URL del servicio de inicio de sesión"
+        }
+      },
+      "oauth_manual": {
+        "description": "Sigue estos pasos desde un **navegador de escritorio**:\n\n1. ve a la página de inicio de sesión {oauth_link};\n2. abre las **DevTools** del navegador (F12) y ve a la pestaña **Red**;\n3. inicia sesión en tu cuenta y pulsa el último botón de confirmación;\n4. en la pestaña **Red**, busca la petición anterior y copia el **{oauth_label}**;\n5. pega el valor aquí{oauth_devtools}",
+        "data": {
+          "oauth_code": "Código OAuth"
+        }
+      },
+      "get_access_token": {
+        "description": "**Autenticación completada**.\nPara usar comandos remotos, marca la opción a continuación y completa el paso OTP",
+        "data": {
+          "remote_commands": "Configurar comandos remotos (se requiere E-remote o Connect Plus)"
+        }
+      },
+      "otp": {
+        "data": {
+          "sms_code": "Código SMS de Stellantis",
+          "pin_code": "Código PIN de la aplicación móvil del vehículo"
+        }
+      },
+      "options": {
+        "data": {
+          "notifications": "Habilitar notificaciones persistentes",
+          "anonymize_logs": "Anonimizar datos personales en los registros",
+          "mqtt_live_updates": "Actualizar el estado del vehículo en tiempo real vía MQTT"
+        }
+      },
+      "reauth_confirm": {
+        "description": "Necesitas volver a autenticarte para usar esta integración"
+      },
+      "reconfigure": {
+        "data": {
+          "reconfigure": "Reconfigurar"
+        }
+      }
+    },
+    "error": {
+      "get_oauth_code": "Error al obtener el código oauth",
+      "get_access_token": "Error al obtener el token de acceso",
+      "get_user_info": "Error al obtener la información del usuario",
+      "missing_user_info": "Falta la información del usuario",
+      "get_otp_sms": "Error al obtener el SMS con el código OTP",
+      "get_mqtt_access_token": "Error al obtener el token de acceso MQTT",
+      "get_mqtt_access_token_nok_access": "Código SMS o PIN no válido",
+      "get_mqtt_access_token_nok_maxnbtools": "Límite de dispositivos/SMS alcanzado, reinicia tu cuenta Stellantis e inténtalo de nuevo",
+      "get_mqtt_access_token_nok_nok_blocked": "Límite de intentos de PIN incorrectos, reinicia el proceso de configuración",
+      "get_mqtt_access_token_rate_limit": "Se ha superado el límite de solicitudes de token MQTT (6 por día)",
+      "not_loaded": "La integración aún no está cargada, espera a que termine la configuración e inténtalo de nuevo"
+    },
+    "abort": {
+      "already_configured": "La cuenta ya está configurada",
+      "reauth_successful": "La reautenticación se realizó con éxito",
+      "reconfigure_successful": "La configuración se realizó con éxito"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "service_battery_voltage": {
+        "name": "Batería de servicio"
+      },
+      "type": {
+        "name": "Tipo",
+        "state": {
+          "electric": "Eléctrico",
+          "hybrid": "Híbrido",
+          "thermic": "Térmico",
+          "hydrogen": "Hidrógeno"
+        }
+      },
+      "temperature": {
+        "name": "Temperatura"
+      },
+      "mileage": {
+        "name": "Kilometraje",
+        "state_attributes": {
+          "last_updated": {
+            "name": "Última actualización"
+          }
+        }
+      },
+      "speed": {
+        "name": "Velocidad"
+      },
+      "autonomy": {
+        "name": "Autonomía"
+      },
+      "mileage_before_maintenance": {
+        "name": "Kilómetros hasta la próxima revisión"
+      },
+      "days_before_maintenance": {
+        "name": "Días hasta la próxima revisión"
+      },
+      "battery": {
+        "name": "Batería"
+      },
+      "battery_health_resistance": {
+        "name": "Resistencia SOH de la batería"
+      },
+      "battery_health_capacity": {
+        "name": "Capacidad SOH de la batería"
+      },
+      "battery_charging_rate": {
+        "name": "Tasa de carga de la batería"
+      },
+      "battery_charging_type": {
+        "name": "Tipo de carga de la batería",
+        "state": {
+          "no": "No",
+          "slow": "Lenta",
+          "quick": "Rápida"
+        }
+      },
+      "battery_charging_end": {
+        "name": "Fin de carga de la batería"
+      },
+      "battery_capacity": {
+        "name": "Capacidad de la batería"
+      },
+      "battery_residual": {
+        "name": "Batería residual"
+      },
+      "command_status": {
+        "name": "Estado del comando",
+        "state": {
+          "rate_limit": "Límite de tasa superado (6 cada 20 minutos)",
+          "not_compatible": "No compatible",
+          "failed": "Fallido",
+          "doors_state_unlocked": "Todas las puertas desbloqueadas",
+          "doors_state_locked": "Todas las puertas bloqueadas",
+          "doors_discarded_door_open": "Descartado: una puerta está abierta",
+          "doors_request_refused": "Rechazado: puerta abierta o llave dentro",
+          "doors_unknown_reason": "Rechazado: motivo desconocido",
+          "doors_cid_inside": "Rechazado: llave dentro del vehículo",
+          "warning_discarded_sev_not_stop": "Descartado: motor en marcha",
+          "warning_wait_before_resend": "Ya ejecutado: espera antes de reenviar",
+          "precond_discarded_sev_not_stop": "Descartado: motor en marcha",
+          "precond_discarded_already_ongoing": "Descartado: ya en curso",
+          "precond_discarded_communication_problem": "Descartado: problema de comunicación",
+          "precond_stop_discarded_sev_not_stop": "Parada descartada: motor en marcha",
+          "precond_stop_discarded_not_ongoing": "Parada descartada: no en marcha",
+          "charging_discarded_standby": "Descartado: sistema de carga en espera",
+          "charging_discarded_already_ongoing": "Descartado: ya en carga",
+          "charging_discarded_communication_problem": "Descartado: problema de comunicación con el sistema de carga",
+          "charging_discarded_sev_not_stop": "Descartado: motor en marcha",
+          "903": "Reenviado",
+          "902": "Comprobando estado",
+          "901": "Despertar vehículo",
+          "900": "Aceptado",
+          "507": "Sin cobertura GPS",
+          "506": "Proveedor de telefonía no compatible",
+          "502": "Duplicado",
+          "500": "Error",
+          "422": "Privacidad activada",
+          "300": "Tiempo de espera agotado",
+          "0": "Completado"
+        }
+      },
+      "fuel": {
+        "name": "Combustible"
+      },
+      "fuel_autonomy": {
+        "name": "Autonomía de combustible"
+      },
+      "fuel_consumption_total": {
+        "name": "Consumo total de combustible"
+      },
+      "fuel_consumption_instant": {
+        "name": "Consumo instantáneo de combustible"
+      },
+      "coolant_temperature": {
+        "name": "Temperatura del refrigerante"
+      },
+      "oil_temperature": {
+        "name": "Temperatura del aceite"
+      },
+      "air_temperature": {
+        "name": "Temperatura del aire"
+      },
+      "driving_behavior": {
+        "name": "Comportamiento de conducción"
+      },
+      "last_trip": {
+        "name": "Último viaje",
+        "state_attributes": {
+          "duration": {
+            "name": "Duración"
+          },
+          "start_mileage": {
+            "name": "Kilometraje inicial"
+          },
+          "avg_speed": {
+            "name": "Velocidad media"
+          },
+          "max_speed": {
+            "name": "Velocidad máxima"
+          },
+          "electric_consumption": {
+            "name": "Consumo eléctrico"
+          },
+          "electric_avg_consumption": {
+            "name": "Consumo eléctrico medio"
+          },
+          "fuel_consumption": {
+            "name": "Consumo de combustible"
+          },
+          "fuel_avg_consumption": {
+            "name": "Consumo medio de combustible"
+          }
+        }
+      },
+      "last_charge": {
+        "name": "Última carga",
+        "state_attributes": {
+          "in_progress": {
+            "name": "En curso",
+            "state": {
+              "true": "Sí"
+            }
+          },
+          "mileage": {
+            "name": "Kilometraje"
+          },
+          "initial_percentage": {
+            "name": "Porcentaje inicial"
+          },
+          "initial_energy": {
+            "name": "Energía inicial"
+          },
+          "initial_autonomy": {
+            "name": "Autonomía inicial"
+          },
+          "final_time": {
+            "name": "Hora final"
+          },
+          "final_percentage": {
+            "name": "Porcentaje final"
+          },
+          "final_energy": {
+            "name": "Energía final"
+          },
+          "final_autonomy": {
+            "name": "Autonomía final"
+          },
+          "duration": {
+            "name": "Duración"
+          },
+          "recharged_percent": {
+            "name": "Porcentaje recargado"
+          },
+          "recharged_energy": {
+            "name": "Energía recargada"
+          },
+          "recharged_autonomy": {
+            "name": "Autonomía recargada"
+          },
+          "avg_power": {
+            "name": "Potencia media"
+          }
+        }
+      }
+    },
+    "binary_sensor": {
+      "moving": {
+        "name": "En movimiento"
+      },
+      "doors": {
+        "name": "Puertas"
+      },
+      "door_trunk": {
+        "name": "Maletero"
+      },
+      "door_driver": {
+        "name": "Puerta del conductor"
+      },
+      "door_passenger": {
+        "name": "Puerta del acompañante"
+      },
+      "door_rear_left": {
+        "name": "Puerta trasera izquierda"
+      },
+      "door_rear_right": {
+        "name": "Puerta trasera derecha"
+      },
+      "belt_driver": {
+        "name": "Cinturón del conductor"
+      },
+      "belt_passenger": {
+        "name": "Cinturón del acompañante"
+      },
+      "battery_plugged": {
+        "name": "Batería conectada"
+      },
+      "battery_charging": {
+        "name": "Batería en carga"
+      },
+      "battery_charging_limit": {
+        "name": "Límite de carga de la batería al 80%"
+      },
+      "engine": {
+        "name": "Motor"
+      },
+      "preconditioning": {
+        "name": "Climatización"
+      },
+      "alarm": {
+        "name": "Alarma"
+      },
+      "privacy": {
+        "name": "Privacidad"
+      },
+      "remote_commands": {
+        "name": "Comandos remotos"
+      },
+      "command_pending": {
+        "name": "Comando pendiente"
+      },
+      "daylight": {
+        "name": "Luz diurna"
+      }
+    },
+    "button": {
+      "wakeup": {
+        "name": "Despertar"
+      },
+      "doors_lock": {
+        "name": "Cerrar puertas"
+      },
+      "doors_unlock": {
+        "name": "Abrir puertas"
+      },
+      "horn": {
+        "name": "Bocina"
+      },
+      "lights": {
+        "name": "Luces"
+      },
+      "charge_start": {
+        "name": "Iniciar carga"
+      },
+      "charge_stop": {
+        "name": "Detener carga"
+      },
+      "charge_limit_on": {
+        "name": "Límite de carga al 80% activado"
+      },
+      "charge_limit_off": {
+        "name": "Límite de carga al 80% desactivado"
+      },
+      "preconditioning_start": {
+        "name": "Iniciar preacondicionamiento"
+      },
+      "preconditioning_stop": {
+        "name": "Detener preacondicionamiento"
+      }
+    },
+    "device_tracker": {
+      "vehicle": {
+        "name": "Vehículo",
+        "state_attributes": {
+          "altitude": {
+            "name": "Altitud"
+          },
+          "fix_status": {
+            "name": "Estado de la corrección"
+          },
+          "signal_quality": {
+            "name": "Calidad de la señal"
+          },
+          "position_updated_at": {
+            "name": "Actualizado a las"
+          },
+          "entity_picture": {
+            "name": "Imagen de la entidad"
+          }
+        }
+      }
+    },
+    "number": {
+      "battery_charging_limit": {
+        "name": "Límite de carga de la batería"
+      },
+      "refresh_interval": {
+        "name": "Intervalo de actualización de datos"
+      }
+    },
+    "switch": {
+      "battery_charging_limit": {
+        "name": "Límite de carga de la batería"
+      },
+      "abrp_sync": {
+        "name": "Sincronización ABRP"
+      },
+      "battery_values_correction": {
+        "name": "Corrección de valores de batería"
+      }
+    },
+    "text": {
+      "abrp_token": {
+        "name": "Token ABRP"
+      }
+    },
+    "time": {
+      "battery_charging_start": {
+        "name": "Inicio de carga de la batería"
+      }
+    }
+  },
+  "exceptions": {
+    "command_already_pending": {
+      "message": "No se puede enviar \"{name}\": \"{pending_name}\" todavía está esperando una respuesta del vehículo."
+    }
+  },
+  "common": {
+    "access_token_error_title": "Error de token de acceso",
+    "access_token_error_message": "Consulta la documentación oficial en la sección [Código OAuth2]({oauth_token_doc_link})",
+    "otp_error_title": "Error OTP",
+    "otp_error_message": "Consulta la documentación oficial en la sección [Error OTP - NOK:MAXNBTOOLS]({otp_nokmaxnbtools_doc_link})",
+    "no_vehicles_found_title": "No disponible",
+    "no_vehicles_found_message": "No hay vehículos conectados disponibles en esta cuenta",
+    "command_error_title": "Comando",
+    "command_error_message": "El comando no se envió correctamente",
+    "get_oauth_code_title": "Error del código OAuth",
+    "get_oauth_code_message": "No se pudo recuperar el código OAuth de esta cuenta. Comprueba tu correo electrónico y contraseña, o inténtalo de nuevo más tarde si el servicio de inicio de sesión remoto no está disponible",
+    "reconfigure_otp_title": "Comandos remotos desactivados",
+    "reconfigure_otp_message": "La autenticación de los comandos remotos falló, por lo que se han desactivado. Vuelve a configurar la integración para activarlos de nuevo"
+  },
+  "issues": {
+    "vehicle_removed": {
+      "title": "El vehículo {vin} se eliminó de tu cuenta",
+      "description": "Home Assistant ya no puede acceder al vehículo `{vin}` a través de la API de Stellantis, y ya no aparece en tu cuenta de Stellantis. Esto normalmente significa que el vehículo se ha dado de baja, se ha eliminado o ya no está disponible para esta cuenta."
+    }
+  },
+  "selector": {
+    "reconfigure": {
+      "options": {
+        "oauth": "Vuelve a autenticar tu cuenta",
+        "remote_commands": "Configurar comandos remotos (se requiere E-remote o Connect Plus)",
+        "options": "Preferencias globales"
+      }
+    }
+  }
+}

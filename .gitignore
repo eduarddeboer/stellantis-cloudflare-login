@@ -1,0 +1,15 @@
+.DS_Store
+__pycache__/
+*.pyc
+.env
+.env.*
+.dev.vars
+*.pem
+*.p12
+*.key
+secrets.yaml
+configuration.yaml
+.storage/
+worker/
+node_modules/
+.wrangler/
