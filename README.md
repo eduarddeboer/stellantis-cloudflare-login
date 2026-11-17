@@ -9,9 +9,51 @@ This is an unofficial community project comprising:
 
 The Worker requests an OAuth *authorization code*. Home Assistant remains the owner of token exchange, token refresh and vehicle data access. The project is not affiliated with Stellantis, Peugeot, Cloudflare, Home Assistant, or upstream authors.
 
-## Status (17 November 2026)
+## Acceptance status (17 November 2026)
 
-The original separate staging Worker has obtained an OAuth authorization code in a controlled MyPeugeot NL test. An earlier isolated release candidate passed 40 offline tests. **Neither result proves that the combined distribution is ready to install:** Marketplace packaging, full Home Assistant login, token exchange, refresh, reauthentication, and rollback still require isolated tests. Do not replace the working integration or change Energie-regisseur.
+This fork is **not production-ready**. Verified results to date:
+
+- Worker and Home Assistant offline regression checks pass, including OAuth code-to-token
+  simulation, token refresh, secret-safe HTTP diagnostics, login rate limiting and
+  cleanup of fictional account resources.
+- A separate staging Worker responds correctly to authenticated, credential-free
+  login-host validation and rejects lookalike hosts.
+- The isolated Home Assistant VirtualBox lab displays the configuration form;
+  installation and removal without a configured account (Test A) have passed.
+  The cleanup routine was also exercised with fake account data (Test B).
+- The local HACS ZIP builder is deterministic, but no published release asset or
+  Marketplace install/upgrade/rollback has been accepted yet.
+
+**Not yet accepted:** live rate-limit exhaustion (HTTP 429), full real-account
+OAuth → token exchange → refresh → reauthentication, and HACS prerelease
+installation/rollback. The same MyPeugeot account is used by the working
+production integration; do not run another login without assessing token
+invalidation risk. Never replace that production installation during development.
+
+## Local-first developer checks
+
+Instead of starting GitHub runners on every PR commit, run the complete
+credential-free suite on your own computer from the repository root:
+
+```sh
+bash scripts/check_local.sh
+```
+
+This executes Python syntax/tests and HACS ZIP validation, Worker TypeScript
+and unit tests, and a **Wrangler staging dry-run**. It does not deploy, publish,
+or connect to a Peugeot account. GitHub Actions still runs on changes merged
+to `main` as a final safety net; PRs are not automatically run on GitHub.
+
+## HACS prerelease requirements
+
+The root `hacs.json` declares `zip_release: true`. An actual GitHub release
+must therefore have a version/tag corresponding to the version in
+`custom_components/stellantis_vehicles/manifest.json` and a release asset
+named **`stellantis_vehicles.zip`** built by
+`python3 scripts/build_release_zip.py`. A local `dist/` ZIP or a successful
+CI run is **not** a published release. Release tags/assets are created only
+after the remaining isolated acceptance is complete. Preserve previous
+releases for rollback.
 
 ## Safe setup
 
