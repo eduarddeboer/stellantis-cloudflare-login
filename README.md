@@ -60,6 +60,14 @@ only a **local** build and has not been published or installed via Marketplace.
 - The local HACS ZIP builder is deterministic, but no published release asset or
   Marketplace install/upgrade/rollback has been accepted yet.
 
+**Security review in progress:** the Worker now applies its canonical
+OAuth authorization-URL policy to credential-bearing requests, checks
+registered Stellantis mobile callback schemes, and rejects a changed
+top-level login hostname before filling credentials. This change is
+**not yet locally tested or deployed**; genuine Peugeot redirects may need
+a safe read-only staging diagnosis. Its presence does not prove that
+the complete real-account login succeeds.
+
 **Not yet accepted:** live rate-limit exhaustion (HTTP 429), full real-account
 OAuth → token exchange → refresh → reauthentication, and HACS prerelease
 installation/rollback. The same MyPeugeot account is used by the working
@@ -170,8 +178,9 @@ A local `dist/` ZIP or a successful CI run is **not** a published release.
 Preserve previous published releases for future rollback.
 
 The public Marketplace **catalog** is a separate future milestone. Catalog
-listing requires a repository description and topics (currently missing),
-a published GitHub release, and passing official HACS and hassfest validations.
+listing requires a repository description and topics (**both verified
+present on 17 November 2026**), a published GitHub release, and passing
+official HACS and hassfest validations.
 These checks cannot be replaced by the local ZIP builder or simulated Python
 OAuth tests. We will run required public validations at the release gate
 instead of starting a GitHub runner for each development commit.
